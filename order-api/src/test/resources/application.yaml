@@ -1,0 +1,139 @@
+# test YAML should mirror main YAML as much as possible for GraalVM tracing agent to intercept everything
+# general exceptions to this rule are testcontainers service connections
+custom:
+  orders:
+    batch_size: 10
+    max_attempts: 10
+    min_insync_replicas: 1
+    partitions: 1
+    poll_delay: PT30S
+    poll_initial_delay: PT24H
+    publish_timeout: PT5S
+    replication_factor: 1
+    topic_name: orders
+logbook:
+  format:
+    style: http
+  predicate:
+    exclude:
+      - path: /actuator/**
+      - path: /api-docs/**
+      - path: /swagger-ui/**
+logging:
+  include-application-name: false
+  level:
+    com.hamza: debug
+    org.hibernate:
+      SQL: debug
+      stat: debug
+    org.zalando.logbook: trace
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  health:
+    livenessstate:
+      enabled: true
+    readinessstate:
+      enabled: true
+server:
+  compression:
+    additional-mime-types: application/x-ndjson,text/event-stream
+    enabled: true
+  forward-headers-strategy: native
+  port: 0
+  ssl:
+    enabled: false
+spring:
+  application:
+    name: order-api
+  config:
+    activate:
+      on-profile: default
+    import:
+      - optional:file:.env[.properties]
+  datasource:
+    driverClassName: org.postgresql.Driver
+  jackson:
+    default-property-inclusion: non_null
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    open-in-view: false
+    properties:
+      hibernate:
+        batch_fetch_style: dynamic
+        cache:
+          region:
+            factory_class: org.hibernate.cache.jcache.internal.JCacheRegionFactory
+          use_query_cache: true
+          use_second_level_cache: true
+        default_batch_fetch_size: 32
+        enable_lazy_load_no_trans: false
+        format_sql: false
+        generate_statistics: true
+        globally_quoted_identifiers: true
+        javax:
+          cache:
+            missing_cache_strategy: fail
+            provider: org.ehcache.jsr107.EhcacheCachingProvider
+            uri: ehcache.xml
+        jdbc:
+          batch_size: 32
+        jpa:
+          compliance:
+            query: false
+        type:
+          json_format_mapper: jackson3
+        max_fetch_depth: 1
+        order_inserts: true
+        order_updates: true
+        query:
+          fail_on_pagination_over_collection_fetch: true
+          in_clause_parameter_padding: true
+        session:
+          events:
+            log:
+              LOG_QUERIES_SLOWER_THAN_MS: '100'
+        show_sql: false
+  kafka:
+    admin:
+      modify-topic-configs: true
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      acks: all
+      properties:
+        enable:
+          idempotence: true
+  liquibase:
+    drop-first: true
+    enabled: false
+  main:
+    banner-mode: off
+  output:
+    ansi:
+      enabled: always
+  sql:
+    init:
+      mode: never
+  threads:
+    virtual:
+      enabled: true
+  web:
+    error:
+      include-exception: true
+      include-message: always
+      include-stacktrace: always
+springdoc:
+  api-docs:
+    path: /api-docs
+  packagesToScan: com.hamza
+  pathsToMatch: /**
+  swagger-ui:
+    disable-swagger-default-url: true
+    doc-expansion: none
+    operationsSorter: method
+    path: /swagger-ui
+    tagsSorter: alpha

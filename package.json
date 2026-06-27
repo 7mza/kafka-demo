@@ -1,0 +1,26 @@
+{
+  "scripts": {
+    "clean": "npm prune && npm cache verify",
+    "clear": "npm run clean",
+    "format": "npx prettier **/*.{json,md,xml,yaml,yml} --write",
+    "ncu": "npx ncu"
+  },
+  "devDependencies": {
+    "@prettier/plugin-xml": "^3.4.2",
+    "npm-check-updates": "^22.2.7",
+    "prettier": "^3.9.0",
+    "prettier-plugin-organize-attributes": "^1.0.0"
+  },
+  "prettier": {
+    "attributeSort": "ASC",
+    "bracketSameLine": true,
+    "plugins": [
+      "@prettier/plugin-xml",
+      "prettier-plugin-organize-attributes"
+    ],
+    "semi": true,
+    "singleQuote": true,
+    "trailingComma": "es5",
+    "singleAttributePerLine": true
+  }
+}

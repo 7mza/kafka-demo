@@ -1,0 +1,11 @@
+**
+!build.gradle.kts
+!commons/build.gradle.kts
+!commons/src
+!gradle.properties
+!gradle/
+!gradlew
+!order-api/Dockerfile
+!order-api/build.gradle.kts
+!order-api/src
+!settings.gradle.kts

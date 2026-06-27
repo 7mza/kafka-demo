@@ -1,0 +1,101 @@
+package com.hamza.kafka.order
+
+import org.apache.kafka.clients.consumer.ConsumerConfig
+import org.apache.kafka.common.serialization.StringDeserializer
+import org.assertj.core.api.Assertions.assertThat
+import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.Test
+import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.beans.factory.annotation.Value
+import org.springframework.boot.test.context.SpringBootTest
+import org.springframework.context.annotation.Import
+import org.springframework.kafka.core.DefaultKafkaConsumerFactory
+import org.springframework.kafka.test.utils.KafkaTestUtils
+import org.testcontainers.DockerClientFactory
+import org.testcontainers.kafka.KafkaContainer
+import tools.jackson.databind.ObjectMapper
+import java.time.Duration
+import kotlin.collections.set
+
+@SpringBootTest(
+    webEnvironment = SpringBootTest.WebEnvironment.NONE,
+    properties = ["custom.orders.publish_timeout=PT2S"], // tighten timeout
+)
+@Import(PgTestContainer::class, PausableKafkaTestContainer::class)
+class PublishServiceTimeoutTest {
+    @Autowired
+    private lateinit var service: IPublishService
+
+    @Autowired
+    private lateinit var objectMapper: ObjectMapper
+
+    @Autowired
+    private lateinit var pKafkaContainer: KafkaContainer
+
+    @Value($$"${custom.orders.topic_name}")
+    private lateinit var topicName: String
+
+    private val consumer by lazy {
+        val props =
+            KafkaTestUtils.consumerProps(
+                pKafkaContainer.bootstrapServers,
+                "publish-service-test",
+                true,
+            )
+        props[ConsumerConfig.AUTO_OFFSET_RESET_CONFIG] = "earliest"
+        DefaultKafkaConsumerFactory<String, String>(
+            props,
+            StringDeserializer(),
+            StringDeserializer(),
+        ).createConsumer()
+    }
+
+    private val dockerClient = DockerClientFactory.instance().client()
+
+    @AfterEach
+    fun afterEach() {
+        consumer.close()
+        runCatching { dockerClient.unpauseContainerCmd(pKafkaContainer.containerId).exec() }
+    }
+
+    @Test
+    fun `publish should not inc attempts when kafka does not ack in time (transient failure)`() {
+        // gen event + outbox
+        val event =
+            OrderPlacedEvent(
+                orderId = "order_2203",
+                customerId = "user_2203",
+                items = listOf(Item(sku = "sku-01", quantity = 10, unitPriceCents = 199)),
+                totalAmountCents = 1990,
+            )
+        val outbox =
+            event.toOrderOutbox(objectMapper, topicName).also {
+                assertThat(it.attempts).isZero
+                assertThat(it.publishedAt).isNull()
+                assertThat(it.lastError).isNull()
+            }
+
+        // subscribe to kafka
+        consumer.subscribe(listOf(topicName))
+
+        // pause kafka
+        dockerClient.pauseContainerCmd(pKafkaContainer.containerId).exec()
+
+        // publish event to kafka
+        service.publish(listOf(outbox)).also {
+            assertThat(it).isEmpty() // kafka is paused, nothing succeeds
+        }
+        // timeout is a transient infrastructure failure, attempts should not be inc
+        assertThat(outbox.attempts).isZero
+        assertThat(outbox.publishedAt).isNull() // check still not published
+        assertThat(outbox.lastError).isNull()
+
+        // resume kafka
+        dockerClient.unpauseContainerCmd(pKafkaContainer.containerId).exec()
+
+        // check nothing was sent to kafka
+        KafkaTestUtils.getRecords(consumer, Duration.ofSeconds(30)).also {
+            assertThat(it).isEmpty()
+        }
+    }
+}
