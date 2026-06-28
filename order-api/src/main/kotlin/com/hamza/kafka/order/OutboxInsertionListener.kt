@@ -7,11 +7,17 @@ import org.springframework.context.ApplicationListener
 import org.springframework.stereotype.Component
 import javax.sql.DataSource
 
+interface IOutboxInsertionListener : ApplicationListener<ApplicationReadyEvent> {
+    override fun onApplicationEvent(event: ApplicationReadyEvent)
+
+    fun listen()
+}
+
 @Component
 class OutboxInsertionListener(
     private val dataSource: DataSource,
     private val service: IDrainServiceTrigger,
-) : ApplicationListener<ApplicationReadyEvent> {
+) : IOutboxInsertionListener {
     private val logger = LoggerFactory.getLogger(javaClass)
 
     override fun onApplicationEvent(event: ApplicationReadyEvent) {
@@ -21,17 +27,17 @@ class OutboxInsertionListener(
             .start(::listen)
     }
 
-    private fun listen() {
+    override fun listen() {
         while (!Thread.currentThread().isInterrupted) {
             try {
                 dataSource.connection.use {
                     val pgConn = it.unwrap(PGConnection::class.java)
                     it.createStatement().use { stm -> stm.execute("LISTEN outbox_insert_channel") }
-                    logger.info("Listening on channel: outbox_insert_channel")
+                    logger.info("Listening to DB events on channel: outbox_insert_channel")
                     while (!Thread.currentThread().isInterrupted) {
                         val notifications = pgConn.getNotifications(10_000)
                         if (!notifications.isNullOrEmpty()) {
-                            logger.info("Received {} notifications, triggering drain service", notifications.size)
+                            logger.info("Received {} notifications, triggering DrainService", notifications.size)
                             service.trigger()
                         }
                     }

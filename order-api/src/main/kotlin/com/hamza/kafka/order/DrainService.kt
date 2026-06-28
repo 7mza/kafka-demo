@@ -21,11 +21,11 @@ class DrainServiceTrigger(
     @Async
     override fun trigger() {
         if (!semaphore.tryAcquire()) {
-            logger.info("drain service already running")
+            logger.info("DrainService already running")
             return
         }
         try {
-            while (service.drainBatch()) { /* keep going until outbox empty */ }
+            while (service.drainOutboxes()) { /* keep going until outbox empty */ }
         } finally {
             semaphore.release()
         }
@@ -33,7 +33,7 @@ class DrainServiceTrigger(
 }
 
 interface IDrainService {
-    fun drainBatch(): Boolean
+    fun drainOutboxes(): Boolean
 }
 
 @Service
@@ -44,7 +44,7 @@ class DrainService(
     @Value($$"${custom.orders.max_attempts}") private val maxAttempts: Int,
 ) : IDrainService {
     @Transactional
-    override fun drainBatch() =
+    override fun drainOutboxes() =
         repo
             .retrieveUnpublished(batchSize, maxAttempts)
             .takeIf { it.isNotEmpty() }

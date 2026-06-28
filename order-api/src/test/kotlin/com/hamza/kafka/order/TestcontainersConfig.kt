@@ -17,6 +17,14 @@ class PgTestContainer {
     fun pgContainer() = PostgreSQLContainer(DockerImageName.parse("postgres:alpine"))
 }
 
+// separate container that can be paused for timeout/error testing without affecting normal tests
+@TestConfiguration(proxyBeanMethods = false)
+class PausablePgTestContainer {
+    @Bean
+    @ServiceConnection
+    fun pPgContainer() = PostgreSQLContainer(DockerImageName.parse("postgres:alpine"))
+}
+
 @TestConfiguration(proxyBeanMethods = false)
 class KafkaTestContainer {
     @Bean
