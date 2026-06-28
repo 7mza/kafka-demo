@@ -1,5 +1,7 @@
 # Kafka demo
 
+![Coverage](.github/badges/jacoco.svg)
+
 event-driven pipeline demo
 
 ## env

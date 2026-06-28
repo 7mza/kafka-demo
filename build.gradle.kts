@@ -3,6 +3,7 @@ import org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL
 import org.gradle.api.tasks.testing.logging.TestLogEvent.FAILED
 import org.jlleitschuh.gradle.ktlint.KtlintExtension
 import org.owasp.dependencycheck.reporting.ReportGenerator.Format
+import org.springframework.boot.gradle.plugin.SpringBootPlugin
 
 plugins {
     kotlin("jvm") version "2.4.0"
@@ -19,6 +20,7 @@ plugins {
     id("org.jlleitschuh.gradle.ktlint") version "14.2.0"
     id("org.owasp.dependencycheck") version "12.2.2"
     jacoco
+    id("jacoco-report-aggregation")
 }
 
 allprojects {
@@ -136,7 +138,18 @@ subprojects {
     node { download = false }
 }
 
+dependencies {
+    jacocoAggregation(project(":commons"))
+    jacocoAggregation(project(":order-api"))
+}
+
+dependencyManagement { imports { mavenBom(SpringBootPlugin.BOM_COORDINATES) } }
+
 tasks {
+    test { finalizedBy(testCodeCoverageReport) }
+
+    testCodeCoverageReport { reports.csv.required = true }
+
     val npmRunFormat =
         register("npm_run_format", NpmTask::class) {
             description = "npm run format hook"
