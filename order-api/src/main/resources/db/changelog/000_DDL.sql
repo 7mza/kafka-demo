@@ -30,10 +30,13 @@ create table orders_outbox
     constraint orders_outbox_version_check check (version >= 0)
 );
 
+/* unpublished outboxes index */
 create index idx_orders_outbox_unpublished on orders_outbox ("createdAt") where "publishedAt" is null;
 
+/* dead letter outboxes index */
 create index idx_orders_outbox_dead_letter on orders_outbox ("createdAt") where "lastError" is not null;
 
+/* dead letter outboxes view */
 create view dead_letter_outbox as
 select id,
        "orderId",

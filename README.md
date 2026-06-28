@@ -1,14 +1,14 @@
-# Kafka Demo
+# Kafka demo
 
-Event-driven pipeline demo
+event-driven pipeline demo
 
-- KRaft multi broker cluster
-- replication
-- partitioning
-- manual outbox
-- automatic outbox using debezium
-- GraalVM native compilation
-- mTLS security
+## env
+
+![Kraft cluster](docs/kafka_comp_demo.png)
+
+this env can be modified using [compose.yaml](compose.yaml) and [.env](.env)
+
+(in a real prod env it should be multiple isolation zones with N ctrls + M brokers in each zone)
 
 ## components
 
@@ -17,8 +17,6 @@ Event-driven pipeline demo
 shared libs
 
 ### order-api
-
-#### sequence
 
 ![order api sequence UML](docs/order_api_seq.png)
 
@@ -29,3 +27,38 @@ TODO
 ### audit-service
 
 TODO
+
+## run
+
+```shell
+docker compose up --build
+```
+
+## build
+
+[sdkman](https://sdkman.io)
+
+[nvm](https://github.com/nvm-sh/nvm)
+
+[docker](https://docs.docker.com/engine/install/)
+
+```shell
+nvm use && npm i && sdk env install
+```
+
+JVM
+
+[uses spring compose support](compose.dev.yaml)
+
+```shell
+./gradlew clean ktlintFormat ktlintCheck build
+./gradlew bootRun
+```
+
+Native
+
+```shell
+./gradlew clean ktlintFormat ktlintCheck build -PgenerateMetadata && ./gradlew --stop
+./gradlew buildImage && ./gradlew --stop
+docker compose up --build
+```

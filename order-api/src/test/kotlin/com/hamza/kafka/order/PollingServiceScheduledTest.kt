@@ -11,7 +11,7 @@ import java.util.concurrent.TimeUnit
 
 @SpringBootTest(
     webEnvironment = SpringBootTest.WebEnvironment.NONE,
-    properties = ["custom.orders.poll_delay=PT5S", "custom.orders.poll_initial_delay=PT0S"],
+    properties = ["custom.orders.poll_delay=PT1S", "custom.orders.poll_initial_delay=PT0S"],
 )
 @Import(PgTestContainer::class)
 class PollingServiceScheduledTest {

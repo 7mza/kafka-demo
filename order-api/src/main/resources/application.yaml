@@ -4,8 +4,8 @@ custom:
     max_attempts: 10
     min_insync_replicas: 1
     partitions: 1
-    poll_delay: PT30S
-    poll_initial_delay: PT0S
+    poll_delay: PT1M
+    poll_initial_delay: PT1M
     publish_timeout: PT5S
     replication_factor: 1
     topic_name: orders

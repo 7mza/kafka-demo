@@ -30,7 +30,7 @@ dependencies {
     implementation("org.zalando:logbook-spring-boot-starter:$logbookSpringVersion")
     implementation(project(":commons"))
 
-    runtimeOnly("org.postgresql:postgresql")
+    implementation("org.postgresql:postgresql")
 
     testImplementation("org.springframework.boot:spring-boot-starter-data-jpa-test")
     testImplementation("org.springframework.boot:spring-boot-starter-kafka-test")

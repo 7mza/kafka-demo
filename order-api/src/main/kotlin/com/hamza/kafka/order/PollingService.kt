@@ -5,13 +5,14 @@ import org.springframework.beans.factory.annotation.Value
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Service
 
+// low freq rescue poll
 interface IPollingService {
     fun poll(): List<OrderOutbox>
 }
 
 @Service
 class PollingService(
-    private val repository: IOrderOutboxRepository,
+    private val repo: IOrderOutboxRepository,
     private val service: IPublishService,
     @Value($$"${custom.orders.batch_size}") private val batchSize: Int,
     @Value($$"${custom.orders.max_attempts}") private val maxAttempts: Int,
@@ -22,7 +23,7 @@ class PollingService(
     )
     @Transactional
     override fun poll() =
-        repository
+        repo
             .retrieveUnpublished(batchSize = batchSize, maxAttempts = maxAttempts)
             .let { service.publish(it) }
 }

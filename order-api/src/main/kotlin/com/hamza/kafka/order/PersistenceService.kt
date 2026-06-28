@@ -16,25 +16,25 @@ interface IPersistenceService {
 
 @Service
 class PersistenceService(
-    private val orderRepository: IOrderRepository,
-    private val orderOutboxRepository: IOrderOutboxRepository,
+    private val orderRepo: IOrderRepository,
+    private val orderOutboxRepo: IOrderOutboxRepository,
     private val objectMapper: ObjectMapper,
     @Value($$"${custom.orders.topic_name}") private val topicName: String,
 ) : IPersistenceService {
     @Transactional
     override fun save(request: OrderPostDto): Order {
-        val order = orderRepository.save(request.toEntity())
+        val order = orderRepo.save(request.toEntity())
         val event = order.toOrderPlacedEvent()
         val outbox = event.toOrderOutbox(objectMapper, topicName)
-        orderOutboxRepository.save(outbox)
+        orderOutboxRepo.save(outbox)
         return order
     }
 
     override fun getOrderById(id: String): Order =
-        orderRepository.findById(id).orElseThrow {
+        orderRepo.findById(id).orElseThrow {
             ResourceNotFoundException(id = id, name = "Order")
         }
 
     override fun getOutboxByOrderId(id: String): OrderOutbox =
-        orderOutboxRepository.findByOrderId(id) ?: throw ResourceNotFoundException(id = id, name = "OrderOutbox")
+        orderOutboxRepo.findByOrderId(id) ?: throw ResourceNotFoundException(id = id, name = "OrderOutbox")
 }

@@ -1,0 +1,48 @@
+package com.hamza.kafka.order
+
+import org.postgresql.PGConnection
+import org.slf4j.LoggerFactory
+import org.springframework.boot.context.event.ApplicationReadyEvent
+import org.springframework.context.ApplicationListener
+import org.springframework.stereotype.Component
+import javax.sql.DataSource
+
+@Component
+class OutboxInsertionListener(
+    private val dataSource: DataSource,
+    private val service: IDrainServiceTrigger,
+) : ApplicationListener<ApplicationReadyEvent> {
+    private val logger = LoggerFactory.getLogger(javaClass)
+
+    override fun onApplicationEvent(event: ApplicationReadyEvent) {
+        Thread
+            .ofVirtual()
+            .name("outbox-insertion-listener")
+            .start(::listen)
+    }
+
+    private fun listen() {
+        while (!Thread.currentThread().isInterrupted) {
+            try {
+                dataSource.connection.use {
+                    val pgConn = it.unwrap(PGConnection::class.java)
+                    it.createStatement().use { stm -> stm.execute("LISTEN outbox_insert_channel") }
+                    logger.info("Listening on channel: outbox_insert_channel")
+                    while (!Thread.currentThread().isInterrupted) {
+                        val notifications = pgConn.getNotifications(10_000)
+                        if (!notifications.isNullOrEmpty()) {
+                            logger.info("Received {} notifications, triggering drain service", notifications.size)
+                            service.trigger()
+                        }
+                    }
+                }
+            } catch (_: InterruptedException) {
+                Thread.currentThread().interrupt()
+                break
+            } catch (ex: Exception) {
+                logger.warn("Listener connection lost, reconnecting in 5s", ex)
+                Thread.sleep(5_000)
+            }
+        }
+    }
+}

@@ -1,0 +1,46 @@
+@startuml
+skinparam linetype ortho
+
+skinparam component {
+    backgroundColor<<leader>> Green
+}
+
+cloud "isolation"  {
+    rectangle "node 0\n<controller + broker>" as N0 {
+        [partition0] <<leader>> as N0P0
+        [partition1] <<replica>> as N0P1
+        [partition2] <<replica>> as N0P2
+    }
+
+    rectangle "node 1\n<controller + broker>" as N1 {
+        [partition0] <<replica>> as N1P0
+        [partition1] <<leader>> as N1P1
+        [partition2] <<replica>> as N1P2
+    }
+
+    rectangle "node 2\n<controller + broker>" as N2 {
+        [partition0] <<replica>> as N2P0
+        [partition1] <<replica>> as N2P1
+        [partition2] <<leader>> as N2P2
+    }
+
+    N0P0 ..> N1P0: replication
+    N0P0 ..> N2P0: replication
+
+    N1P1 ..> N0P1: replication
+    N1P1 ..> N2P1: replication
+
+    N2P2 ..> N0P2: replication
+    N2P2 ..> N1P2: replication
+}
+
+note left
+    **KRaft cluster with 3 nodes:**
+    - every node is controller + broker
+    - replication factor = 3
+    - partitions = 3
+    - min in sync replicas = 2
+    - 1 leader per partition
+    - all nodes in same isolation
+end note
+@enduml

@@ -6,7 +6,7 @@ custom:
     max_attempts: 10
     min_insync_replicas: 1
     partitions: 1
-    poll_delay: PT30S
+    poll_delay: PT24H
     poll_initial_delay: PT24H
     publish_timeout: PT5S
     replication_factor: 1

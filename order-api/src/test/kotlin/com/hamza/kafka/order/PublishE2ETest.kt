@@ -23,7 +23,7 @@ import java.time.Duration
 
 @SpringBootTest(
     webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
-    properties = ["custom.orders.poll_initial_delay=PT0S", "custom.orders.poll_delay=PT0.2S"],
+    properties = ["spring.jpa.hibernate.ddl-auto=validate", "spring.liquibase.enabled=true"],
 )
 @Import(PgTestContainer::class, KafkaTestContainer::class)
 @AutoConfigureRestTestClient
@@ -32,10 +32,10 @@ class PublishE2ETest {
     private lateinit var client: RestTestClient
 
     @Autowired
-    private lateinit var orderRepository: IOrderRepository
+    private lateinit var orderRepo: IOrderRepository
 
     @Autowired
-    private lateinit var outboxRepository: IOrderOutboxRepository
+    private lateinit var outboxRepo: IOrderOutboxRepository
 
     @Autowired
     private lateinit var objectMapper: ObjectMapper
@@ -97,7 +97,7 @@ class PublishE2ETest {
 
         // check orders saved to DB
         requestsById.forEach { (id, request) ->
-            orderRepository.findById(id).orElse(null).also {
+            orderRepo.findById(id).orElse(null).also {
                 assertThat(it).isNotNull
                 assertThat(it!!.customerId).isEqualTo(request.customerId)
                 assertThat(it.items).isEqualTo(request.items.map { item -> item.toEntity() })
@@ -107,7 +107,7 @@ class PublishE2ETest {
         // check orders outbox saved to DB and published without error
         await().atMost(Duration.ofSeconds(30)).untilAsserted {
             ids.forEach {
-                outboxRepository.findByOrderId(it).also { outbox ->
+                outboxRepo.findByOrderId(it).also { outbox ->
                     assertThat(outbox).isNotNull
                     assertThat(outbox!!.publishedAt).isNotNull
                     assertThat(outbox.attempts).isZero
@@ -118,7 +118,7 @@ class PublishE2ETest {
         // check events published to kafka
         val records = KafkaTestUtils.getRecords(consumer, Duration.ofSeconds(30))
         val publishedEvents = records.records(topicName).map { parseJson<OrderPlacedEvent>(it.value(), objectMapper) }
-        val expectedEvents = orderRepository.findAll().map { it.toOrderPlacedEvent() }
+        val expectedEvents = orderRepo.findAll().map { it.toOrderPlacedEvent() }
         assertThat(publishedEvents)
             .usingRecursiveFieldByFieldElementComparator(
                 RecursiveComparisonConfiguration.builder().withIgnoredFields("eventId", "occurredAt").build(),
