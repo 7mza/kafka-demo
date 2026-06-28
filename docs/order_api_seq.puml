@@ -17,22 +17,22 @@ end
 API -> U : order
 
 DB --> API: notify
-note right: trigger on insert that notify `outbox_insert_channel`
+note right: trigger on insert that notify **`outbox_insert_channel`**
 
 group listener on `outbox_insert_channel`
     loop until no unpublished outbox is retrieved
         API --> DB : get unpublished outbox batch
-        note right: publishedAt == null AND attempts <= max_retries
+        note right: **publishedAt == null AND attempts < max_attempts**\nwill lock current batch in DB in case of concurrency\nconcurrent will pick next batch
         DB --> API : outbox batch
         API --> API : extract events
         API --> KAFKA : publish events batch
         alt successful publish
-            KAFKA --> API : ACK publish
+            KAFKA -[#green]-> API : ACK publish
             API --> DB : flag outbox as published
             note right: set publishedAt
         else error publish
-            KAFKA --> API : ERROR
-            API --> API : or ERROR
+            KAFKA -[#red]-> API : ERROR
+            API -[#red]-> API : or ERROR
             alt recoverable error
                 API --> API : do nothing
                 note right
@@ -43,7 +43,7 @@ group listener on `outbox_insert_channel`
                     ...etc
                 end note
             else non recoverable error
-                alt attempts <= max_retries
+                alt attempts < max_attempts
                     API --> DB : inc attempts
                     note right
                         **non recoverable/permanent errors:**
@@ -51,7 +51,7 @@ group listener on `outbox_insert_channel`
                         serialization
                         ...etc
                     end note
-                else attempts > max_retries
+                else attempts >= max_attempts
                     API --> DB : flag outbox as dead letter
                     note right: set lastError
                 end
@@ -62,6 +62,6 @@ end
 
 group low freq rescue periodic poll
       API --> DB
-      note right: previous outbox publication flow in case listener/notify fails
+      note right: previous outbox publication flow\nin case listener/notify fails
 end
 @enduml

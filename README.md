@@ -36,6 +36,10 @@ TODO
 docker compose up --build
 ```
 
+[API](http://localhost:8080/swagger-ui)
+
+[Kafbat UI](http://localhost:8081)
+
 ## build
 
 [sdkman](https://sdkman.io)
@@ -48,19 +52,18 @@ docker compose up --build
 nvm use && npm i && sdk env install
 ```
 
-JVM
-
-[uses spring compose support](compose.dev.yaml)
+### JVM
 
 ```shell
-./gradlew clean ktlintFormat ktlintCheck build
-./gradlew bootRun
+./gradlew clean ktlintFormat ktlintCheck build -x processAot -x processTestAot
 ```
 
-Native
+Spring is configured with [compose support](compose.dev.yaml), run with IDE
+
+### GraalVM
 
 ```shell
-./gradlew clean ktlintFormat ktlintCheck build -PgenerateMetadata && ./gradlew --stop
-./gradlew buildImage && ./gradlew --stop
+./gradlew clean ktlintFormat ktlintCheck build -PgenerateMetadata
+./gradlew buildImage
 docker compose up --build
 ```

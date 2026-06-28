@@ -6,32 +6,32 @@ skinparam component {
 }
 
 cloud "isolation"  {
-    rectangle "node 0\n<controller + broker>" as N0 {
-        [partition0] <<leader>> as N0P0
-        [partition1] <<replica>> as N0P1
-        [partition2] <<replica>> as N0P2
-    }
-
     rectangle "node 1\n<controller + broker>" as N1 {
-        [partition0] <<replica>> as N1P0
         [partition1] <<leader>> as N1P1
         [partition2] <<replica>> as N1P2
+        [partition3] <<replica>> as N1P3
     }
 
     rectangle "node 2\n<controller + broker>" as N2 {
-        [partition0] <<replica>> as N2P0
         [partition1] <<replica>> as N2P1
         [partition2] <<leader>> as N2P2
+        [partition3] <<replica>> as N2P3
     }
 
-    N0P0 ..> N1P0: replication
-    N0P0 ..> N2P0: replication
+    rectangle "node 3\n<controller + broker>" as N3 {
+        [partition1] <<replica>> as N3P1
+        [partition2] <<replica>> as N3P2
+        [partition3] <<leader>> as N3P3
+    }
 
-    N1P1 ..> N0P1: replication
     N1P1 ..> N2P1: replication
+    N1P1 ..> N3P1: replication
 
-    N2P2 ..> N0P2: replication
     N2P2 ..> N1P2: replication
+    N2P2 ..> N3P2: replication
+
+    N3P3 ..> N1P3: replication
+    N3P3 ..> N2P3: replication
 }
 
 note left

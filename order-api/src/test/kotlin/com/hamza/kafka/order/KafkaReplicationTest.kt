@@ -145,6 +145,7 @@ class KafkaReplicationTest {
             )
         val outbox = event.toOrderOutbox(objectMapper, topicName)
 
+        // FIXME: this is failing randomly
         service.publish(listOf(outbox)).also {
             assertThat(it).hasSize(1)
             assertThat(it[0].publishedAt).isNotNull
