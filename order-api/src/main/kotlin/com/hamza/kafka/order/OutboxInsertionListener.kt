@@ -45,8 +45,8 @@ class OutboxInsertionListener(
             } catch (_: InterruptedException) {
                 Thread.currentThread().interrupt()
                 break
-            } catch (ex: Exception) {
-                logger.warn("Listener connection lost, reconnecting in 5s", ex)
+            } catch (_: Exception) {
+                logger.warn("Listener connection lost, reconnecting in 5s")
                 Thread.sleep(5_000)
             }
         }

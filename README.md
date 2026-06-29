@@ -6,7 +6,7 @@ event-driven pipeline demo
 
 ## env
 
-![Kraft cluster](docs/kafka_comp_demo.png)
+![Kraft cluster](docs/kafka_comp_demo.svg)
 
 this env can be modified using [compose.yaml](compose.yaml) and [.env](.env)
 
@@ -20,11 +20,11 @@ shared libs
 
 ### order-api
 
-![order api sequence UML](docs/order_api_seq.png)
+![order api sequence UML](docs/order_api_seq.svg)
 
 ### inventory-service
 
-TODO
+![inventory service sequence UML](docs/inventory_service_seq.svg)
 
 ### audit-service
 

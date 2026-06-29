@@ -1,6 +1,7 @@
 package com.hamza.kafka.order
 
 import com.hamza.kafka.commons.BaseEntity
+import jakarta.persistence.Cacheable
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
 import jakarta.persistence.Table
@@ -8,6 +9,8 @@ import jakarta.validation.constraints.Min
 import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.Pattern
 import jakarta.validation.constraints.Size
+import org.hibernate.annotations.Cache
+import org.hibernate.annotations.CacheConcurrencyStrategy
 import org.hibernate.annotations.ColumnDefault
 import org.hibernate.annotations.JdbcTypeCode
 import org.hibernate.type.SqlTypes
@@ -17,6 +20,8 @@ import java.time.Instant
 
 @Entity
 @Table(name = "orders_outbox")
+@Cacheable
+@Cache(usage = CacheConcurrencyStrategy.READ_WRITE, region = "orders_outbox")
 class OrderOutbox(
     override var id: String,
     //

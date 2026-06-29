@@ -4,7 +4,7 @@ skinparam sequenceMessageAlign center
 actor USER as U
 boundary ORDER_API as API
 database DATABASE as DB
-queue KAFKA
+queue KAFKA as K
 
 U -> API : POST order
 group transactional
@@ -16,41 +16,41 @@ group transactional
 end
 API -> U : order
 
-DB --> API: notify
-note right: trigger on insert that notify **`outbox_insert_channel`**
-
 group listener on `outbox_insert_channel`
+    API <--> DB: listen/notify
+    note right: trigger on insert that notify **`outbox_insert_channel`**
     loop until no unpublished outbox is retrieved
+        note across: **drain service** keep draining unpublished outboxes until none is left then sleeps
         API --> DB : get unpublished outbox batch
-        note right: **publishedAt == null AND attempts < max_attempts**\nwill lock current batch in DB in case of concurrency\nconcurrent will pick next batch
+        note right: **publishedAt == null AND attempts < max_attempts**\nwill lock current batch in DB in case of concurrency\nany concurrent will pick next batch
         DB --> API : outbox batch
         API --> API : extract events
-        API --> KAFKA : publish events batch
+        API --> K : publish events batch
         alt successful publish
-            KAFKA -[#green]-> API : ACK publish
+            K -[#green]-> API : ACK publish
             API --> DB : flag outbox as published
             note right: set publishedAt
         else error publish
-            KAFKA -[#red]-> API : ERROR
+            K -[#red]-> API : ERROR
             API -[#red]-> API : or ERROR
             alt recoverable error
-                API --> API : do nothing
-                note right
+                note across
                     **recoverable/transient errors:**
                     timeout
                     election in progress
                     broker down
                     ...etc
                 end note
+                API --> API : do nothing
             else non recoverable error
+                note across
+                    **non recoverable/permanent errors:**
+                    payload
+                    serialization
+                    ...etc
+                end note
                 alt attempts < max_attempts
                     API --> DB : inc attempts
-                    note right
-                        **non recoverable/permanent errors:**
-                        payload
-                        serialization
-                        ...etc
-                    end note
                 else attempts >= max_attempts
                     API --> DB : flag outbox as dead letter
                     note right: set lastError
@@ -61,7 +61,7 @@ group listener on `outbox_insert_channel`
 end
 
 group low freq rescue periodic poll
-      API --> DB
-      note right: previous outbox publication flow\nin case listener/notify fails
+    API --> DB
+    note across: wake up **drain service**\n(rescue in case listener fails)
 end
 @enduml

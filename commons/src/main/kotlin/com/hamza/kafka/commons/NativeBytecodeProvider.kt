@@ -18,12 +18,12 @@ import org.hibernate.service.spi.ServiceRegistryImplementor
  *  example: @LazyToOne(LazyToOneOption.NO_PROXY)
  */
 class NoneBytecodeProviderInitiator : StandardServiceInitiator<BytecodeProvider> {
-    override fun getServiceInitiated(): Class<BytecodeProvider> = BytecodeProvider::class.java
+    override fun getServiceInitiated() = BytecodeProvider::class.java
 
     override fun initiateService(
         configurationValues: Map<String, Any>,
         registry: ServiceRegistryImplementor,
-    ): BytecodeProvider = BytecodeProviderImpl()
+    ) = BytecodeProviderImpl()
 }
 
 class NativeBytecodeProviderContributor : ServiceContributor {

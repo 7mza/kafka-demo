@@ -8,7 +8,7 @@ custom:
     poll_initial_delay: PT1M
     publish_timeout: PT5S
     replication_factor: 1
-    topic_name: orders
+    topic_name: orders.placed
 logbook:
   format:
     style: http

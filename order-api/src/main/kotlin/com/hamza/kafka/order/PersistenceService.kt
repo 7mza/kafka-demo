@@ -35,6 +35,6 @@ class PersistenceService(
             ResourceNotFoundException(id = id, name = "Order")
         }
 
-    override fun getOutboxByOrderId(id: String): OrderOutbox =
+    override fun getOutboxByOrderId(id: String) =
         orderOutboxRepo.findByOrderId(id) ?: throw ResourceNotFoundException(id = id, name = "OrderOutbox")
 }
