@@ -31,4 +31,9 @@ abstract class BaseEntity(
     @field:Version
     @field:Min(0)
     var version: Int = 0,
-)
+) {
+    override fun equals(other: Any?) =
+        this === other || (other is BaseEntity && other::class == this::class && this.id == other.id)
+
+    override fun hashCode() = this.id.hashCode()
+}

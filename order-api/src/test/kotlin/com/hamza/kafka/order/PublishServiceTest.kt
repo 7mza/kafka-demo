@@ -28,7 +28,7 @@ class PublishServiceTest {
     @Autowired
     private lateinit var kafkaContainer: KafkaContainer
 
-    @Value($$"${custom.orders.topic_name}")
+    @Value($$"${custom.topic_name}")
     private lateinit var topicName: String
 
     private val consumer by lazy {
@@ -39,6 +39,8 @@ class PublishServiceTest {
                 true,
             )
         props[ConsumerConfig.AUTO_OFFSET_RESET_CONFIG] = "earliest"
+        props[ConsumerConfig.METADATA_MAX_AGE_CONFIG] = "1000"
+        props[ConsumerConfig.REQUEST_TIMEOUT_MS_CONFIG] = "2000"
         DefaultKafkaConsumerFactory<String, String>(
             props,
             StringDeserializer(),
@@ -55,13 +57,13 @@ class PublishServiceTest {
     fun `publish should send order to kafka and mark related outbox as published`() {
         // gen event + outbox
         val event =
-            OrderPlacedEvent(
+            Event(
                 orderId = "order_2203",
                 customerId = "user_2203",
                 items = listOf(Item(sku = "sku-01", quantity = 10, unitPriceCents = 199)),
                 totalAmountCents = 1990,
             )
-        val outbox = event.toOrderOutbox(objectMapper, topicName)
+        val outbox = event.toOutbox(objectMapper, topicName)
 
         // subscribe to kafka
         consumer.subscribe(listOf(topicName))
@@ -76,7 +78,7 @@ class PublishServiceTest {
         // check event was sent to kafka
         KafkaTestUtils.getSingleRecord(consumer, topicName, Duration.ofSeconds(30)).also {
             assertThat(it.key()).isEqualTo(outbox.orderId)
-            assertThat(parseJson<OrderPlacedEvent>(it.value(), objectMapper)).isEqualTo(event)
+            assertThat(parseJson<Event>(it.value(), objectMapper)).isEqualTo(event)
         }
     }
 }

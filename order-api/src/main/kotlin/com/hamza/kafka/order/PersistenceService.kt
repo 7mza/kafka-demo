@@ -11,21 +11,21 @@ interface IPersistenceService {
 
     fun getOrderById(id: String): Order
 
-    fun getOutboxByOrderId(id: String): OrderOutbox
+    fun getOutboxByOrderId(id: String): Outbox
 }
 
 @Service
 class PersistenceService(
-    private val orderRepo: IOrderRepository,
-    private val orderOutboxRepo: IOrderOutboxRepository,
+    private val orderRepo: OrderRepository,
+    private val orderOutboxRepo: OutboxRepository,
     private val objectMapper: ObjectMapper,
-    @Value($$"${custom.orders.topic_name}") private val topicName: String,
+    @Value($$"${custom.topic_name}") private val topicName: String,
 ) : IPersistenceService {
     @Transactional
     override fun save(request: OrderPostDto): Order {
         val order = orderRepo.save(request.toEntity())
         val event = order.toOrderPlacedEvent()
-        val outbox = event.toOrderOutbox(objectMapper, topicName)
+        val outbox = event.toOutbox(objectMapper, topicName)
         orderOutboxRepo.save(outbox)
         return order
     }

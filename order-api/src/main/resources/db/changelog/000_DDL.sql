@@ -37,7 +37,7 @@ create index idx_orders_outbox_unpublished on orders_outbox ("createdAt") where 
 create index idx_orders_outbox_dead_letter on orders_outbox ("createdAt") where "lastError" is not null;
 
 /* dead letter outboxes view */
-create view dead_letter_outbox as
+create view dead_letters as
 select id,
        "orderId",
        "eventType",

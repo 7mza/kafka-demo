@@ -51,10 +51,10 @@ class Configurations(
 
     @Bean
     fun ordersTopic(
-        @Value($$"${custom.orders.topic_name}") topicName: String,
-        @Value($$"${custom.orders.partitions}") partitions: Int,
-        @Value($$"${custom.orders.replication_factor}") replicationFactor: Int,
-        @Value($$"${custom.orders.min_insync_replicas}") minInsyncReplicas: Int,
+        @Value($$"${custom.topic_name}") topicName: String,
+        @Value($$"${custom.partitions}") partitions: Int,
+        @Value($$"${custom.replication_factor}") replicationFactor: Int,
+        @Value($$"${custom.min_insync_replicas}") minInsyncReplicas: Int,
     ) = TopicBuilder
         .name(topicName)
         .partitions(partitions)

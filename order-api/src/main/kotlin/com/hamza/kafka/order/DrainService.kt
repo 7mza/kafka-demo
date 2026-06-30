@@ -38,10 +38,10 @@ interface IDrainService {
 
 @Service
 class DrainService(
-    private val repo: IOrderOutboxRepository,
+    private val repo: OutboxRepository,
     private val service: IPublishService,
-    @Value($$"${custom.orders.batch_size}") private val batchSize: Int,
-    @Value($$"${custom.orders.max_attempts}") private val maxAttempts: Int,
+    @Value($$"${custom.batch_size}") private val batchSize: Int,
+    @Value($$"${custom.max_attempts}") private val maxAttempts: Int,
 ) : IDrainService {
     @Transactional
     override fun drainOutboxes() =

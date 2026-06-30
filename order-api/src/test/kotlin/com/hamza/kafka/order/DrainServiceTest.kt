@@ -18,7 +18,7 @@ import java.time.Duration
 @SpringBootTest(
     webEnvironment = SpringBootTest.WebEnvironment.NONE,
     properties = [
-        "custom.orders.batch_size=0", // just verifying triggers, don't care about content
+        "custom.batch_size=0", // just verifying triggers, don't care about content
         "spring.jpa.hibernate.ddl-auto=validate",
         "spring.liquibase.enabled=true",
     ],
@@ -26,10 +26,10 @@ import java.time.Duration
 @Import(PgTestContainer::class)
 class DrainServiceTest {
     @Autowired
-    private lateinit var orderRepo: IOrderRepository
+    private lateinit var orderRepo: OrderRepository
 
     @Autowired
-    private lateinit var outboxRepo: IOrderOutboxRepository
+    private lateinit var outboxRepo: OutboxRepository
 
     @Autowired
     private lateinit var persistenceService: IPersistenceService

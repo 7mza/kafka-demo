@@ -17,7 +17,7 @@ import java.time.Duration
 
 @SpringBootTest(
     webEnvironment = SpringBootTest.WebEnvironment.NONE,
-    properties = ["custom.orders.partitions=3"],
+    properties = ["custom.partitions=3"],
 )
 @Import(PgTestContainer::class, KafkaTestContainer::class)
 class KafkaPartitionTest {
@@ -30,7 +30,7 @@ class KafkaPartitionTest {
     @Autowired
     private lateinit var kafkaContainer: KafkaContainer
 
-    @Value($$"${custom.orders.topic_name}")
+    @Value($$"${custom.topic_name}")
     private lateinit var topicName: String
 
     private val consumer by lazy {
@@ -41,6 +41,8 @@ class KafkaPartitionTest {
                 true,
             )
         props[ConsumerConfig.AUTO_OFFSET_RESET_CONFIG] = "earliest"
+        props[ConsumerConfig.METADATA_MAX_AGE_CONFIG] = "1000"
+        props[ConsumerConfig.REQUEST_TIMEOUT_MS_CONFIG] = "2000"
         DefaultKafkaConsumerFactory<String, String>(
             props,
             StringDeserializer(),
@@ -59,12 +61,12 @@ class KafkaPartitionTest {
         val orderId = "order_2203"
         val outboxes =
             (1..5).map {
-                OrderPlacedEvent(
+                Event(
                     orderId = orderId,
                     customerId = "user_220$it",
                     items = listOf(Item(sku = "sku-0$it", quantity = 1 * it, unitPriceCents = 10 * it)),
                     totalAmountCents = 1 * it * 10 * it,
-                ).toOrderOutbox(objectMapper, topicName)
+                ).toOutbox(objectMapper, topicName)
             }
 
         // subscribe to kafka
@@ -84,12 +86,12 @@ class KafkaPartitionTest {
         // gen many events with different orderId
         val outboxes =
             (1..15).map {
-                OrderPlacedEvent(
+                Event(
                     orderId = "order_220$it",
                     customerId = "user_220$it",
                     items = listOf(Item(sku = "sku-0$it", quantity = 1 * it, unitPriceCents = 10 * it)),
                     totalAmountCents = 1 * it * 10 * it,
-                ).toOrderOutbox(objectMapper, topicName)
+                ).toOutbox(objectMapper, topicName)
             }
 
         // subscribe to kafka

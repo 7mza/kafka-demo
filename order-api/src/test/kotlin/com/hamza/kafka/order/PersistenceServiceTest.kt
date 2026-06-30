@@ -22,15 +22,15 @@ class PersistenceServiceTest {
     private lateinit var service: IPersistenceService
 
     @Autowired
-    private lateinit var orderRepo: IOrderRepository
+    private lateinit var orderRepo: OrderRepository
 
     @Autowired
-    private lateinit var outboxRepo: IOrderOutboxRepository
+    private lateinit var outboxRepo: OutboxRepository
 
     @Autowired
     private lateinit var objectMapper: ObjectMapper
 
-    @Value($$"${custom.orders.topic_name}")
+    @Value($$"${custom.topic_name}")
     private lateinit var topicName: String
 
     private val request =
@@ -80,7 +80,7 @@ class PersistenceServiceTest {
             assertThat(it.updatedAt).isCloseTo(now, offset)
             assertThat(it.version).isZero
 
-            parseJson<OrderPlacedEvent>(it.payload, objectMapper).also { event ->
+            parseJson<Event>(it.payload, objectMapper).also { event ->
                 assertThat(event.eventId).hasSize(13)
                 assertThat(event.eventType).isEqualTo("order.placed")
                 assertThat(event.occurredAt).isNotBlank

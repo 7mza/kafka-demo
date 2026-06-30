@@ -19,7 +19,7 @@ import kotlin.collections.set
 
 @SpringBootTest(
     webEnvironment = SpringBootTest.WebEnvironment.NONE,
-    properties = ["custom.orders.publish_timeout=PT2S"], // tighten timeout
+    properties = ["custom.publish_timeout=PT2S"], // tighten timeout
 )
 @Import(PgTestContainer::class, PausableKafkaTestContainer::class)
 class PublishServiceTimeoutTest {
@@ -32,7 +32,7 @@ class PublishServiceTimeoutTest {
     @Autowired
     private lateinit var pKafkaContainer: KafkaContainer
 
-    @Value($$"${custom.orders.topic_name}")
+    @Value($$"${custom.topic_name}")
     private lateinit var topicName: String
 
     private val consumer by lazy {
@@ -43,6 +43,8 @@ class PublishServiceTimeoutTest {
                 true,
             )
         props[ConsumerConfig.AUTO_OFFSET_RESET_CONFIG] = "earliest"
+        props[ConsumerConfig.METADATA_MAX_AGE_CONFIG] = "1000"
+        props[ConsumerConfig.REQUEST_TIMEOUT_MS_CONFIG] = "2000"
         DefaultKafkaConsumerFactory<String, String>(
             props,
             StringDeserializer(),
@@ -62,14 +64,14 @@ class PublishServiceTimeoutTest {
     fun `publish should not inc attempts when kafka does not ack in time (transient failure)`() {
         // gen event + outbox
         val event =
-            OrderPlacedEvent(
+            Event(
                 orderId = "order_2203",
                 customerId = "user_2203",
                 items = listOf(Item(sku = "sku-01", quantity = 10, unitPriceCents = 199)),
                 totalAmountCents = 1990,
             )
         val outbox =
-            event.toOrderOutbox(objectMapper, topicName).also {
+            event.toOutbox(objectMapper, topicName).also {
                 assertThat(it.attempts).isZero
                 assertThat(it.publishedAt).isNull()
                 assertThat(it.lastError).isNull()
