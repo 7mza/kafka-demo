@@ -33,13 +33,11 @@ fun AdminClient.describeTopicPartitions(topicName: String): List<TopicPartitionI
 @SpringBootTest(
     webEnvironment = SpringBootTest.WebEnvironment.NONE,
     properties = [
-        "custom.orders.min_insync_replicas=2",
-        "custom.orders.partitions=3",
-        "custom.orders.replication_factor=3",
-        "custom.orders.publish_timeout=PT1M", // loosen timeout
-        "custom.orders.topic_name=replication-test",
-        "spring.kafka.producer.properties.metadata.max.age.ms=1000",
-        "spring.kafka.producer.properties.request.timeout.ms=2000",
+        "custom.min_insync_replicas=2",
+        "custom.partitions=3",
+        "custom.publish_timeout=PT1M", // loosen timeout
+        "custom.replication_factor=3",
+        "custom.topic_name=replication-test",
     ],
 )
 @Import(PgTestContainer::class, KafkaReplicationTestContainers::class)
@@ -53,7 +51,7 @@ class KafkaReplicationTest {
     @Autowired
     private lateinit var objectMapper: ObjectMapper
 
-    @Value($$"${custom.orders.topic_name}")
+    @Value($$"${custom.topic_name}")
     private lateinit var topicName: String
 
     @Value($$"${spring.kafka.bootstrap-servers}")
@@ -137,15 +135,14 @@ class KafkaReplicationTest {
         // publish should succeed
         // 2 surviving replicas are enough to satisfy acks=all with min.insync.replicas=2
         val event =
-            OrderPlacedEvent(
+            Event(
                 orderId = "order_2203",
                 customerId = "user_2203",
                 items = listOf(Item(sku = "sku-01", quantity = 1, unitPriceCents = 100)),
                 totalAmountCents = 100,
             )
-        val outbox = event.toOrderOutbox(objectMapper, topicName)
+        val outbox = event.toOutbox(objectMapper, topicName)
 
-        // FIXME: this is failing randomly
         service.publish(listOf(outbox)).also {
             assertThat(it).hasSize(1)
             assertThat(it[0].publishedAt).isNotNull
@@ -154,7 +151,7 @@ class KafkaReplicationTest {
 
         // check event is retrievable
         KafkaTestUtils.getSingleRecord(consumer, topicName, Duration.ofSeconds(30)).also {
-            assertThat(parseJson<OrderPlacedEvent>(it.value(), objectMapper)).isEqualTo(event)
+            assertThat(parseJson<Event>(it.value(), objectMapper)).isEqualTo(event)
         }
 
         // resume paused and check ISR recovered

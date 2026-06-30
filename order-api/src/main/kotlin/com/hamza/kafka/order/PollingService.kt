@@ -12,8 +12,8 @@ class PollingService(
     private val service: IDrainServiceTrigger,
 ) : IPollingService {
     @Scheduled(
-        initialDelayString = $$"${custom.orders.poll_initial_delay}",
-        fixedDelayString = $$"${custom.orders.poll_delay}",
+        initialDelayString = $$"${custom.poll_initial_delay}",
+        fixedDelayString = $$"${custom.poll_delay}",
     )
     override fun poll() = service.trigger()
 }

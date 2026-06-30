@@ -12,23 +12,23 @@ import org.springframework.context.annotation.Import
 
 @DataJpaTest(properties = ["spring.jpa.hibernate.ddl-auto=validate", "spring.liquibase.enabled=true"])
 @Import(PgTestContainer::class)
-class IDeadLetterOutboxRepositoryTest {
+class DeadLetterRepositoryTest {
     @Autowired
-    private lateinit var outboxRepo: IOrderOutboxRepository
+    private lateinit var outboxRepo: OutboxRepository
 
     @Autowired
-    private lateinit var repo: IDeadLetterOutboxRepository
+    private lateinit var repo: DeadLetterRepository
 
     private val orders =
         listOf(
-            OrderOutbox(
+            Outbox(
                 id = TSIDGenerator.next(),
                 orderId = TSIDGenerator.next(),
                 eventType = "event1",
                 topic = "topic",
                 payload = "{}",
             ),
-            OrderOutbox(
+            Outbox(
                 id = TSIDGenerator.next(),
                 orderId = TSIDGenerator.next(),
                 eventType = "event2",

@@ -19,10 +19,10 @@ class PersistenceServiceTransactionTest {
     private lateinit var service: IPersistenceService
 
     @Autowired
-    private lateinit var orderRepo: IOrderRepository
+    private lateinit var orderRepo: OrderRepository
 
     @MockitoSpyBean
-    private lateinit var outboxRepo: IOrderOutboxRepository
+    private lateinit var outboxRepo: OutboxRepository
 
     private val request =
         OrderPostDto(
@@ -38,7 +38,7 @@ class PersistenceServiceTransactionTest {
 
     @Test
     fun `if outbox persistence fail, the whole transaction should be rolled back`() {
-        doThrow(RuntimeException("error")).whenever(outboxRepo).save(any<OrderOutbox>())
+        doThrow(RuntimeException("error")).whenever(outboxRepo).save(any<Outbox>())
         assertThrows<RuntimeException> { service.save(request) }
         assertThat(orderRepo.count()).isZero
         assertThat(outboxRepo.count()).isZero

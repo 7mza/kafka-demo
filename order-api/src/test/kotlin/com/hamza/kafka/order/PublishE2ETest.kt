@@ -32,10 +32,10 @@ class PublishE2ETest {
     private lateinit var client: RestTestClient
 
     @Autowired
-    private lateinit var orderRepo: IOrderRepository
+    private lateinit var orderRepo: OrderRepository
 
     @Autowired
-    private lateinit var outboxRepo: IOrderOutboxRepository
+    private lateinit var outboxRepo: OutboxRepository
 
     @Autowired
     private lateinit var objectMapper: ObjectMapper
@@ -43,7 +43,7 @@ class PublishE2ETest {
     @Autowired
     private lateinit var kafkaContainer: KafkaContainer
 
-    @Value($$"${custom.orders.topic_name}")
+    @Value($$"${custom.topic_name}")
     private lateinit var topicName: String
 
     private val consumer by lazy {
@@ -54,6 +54,8 @@ class PublishE2ETest {
                 true,
             )
         props[ConsumerConfig.AUTO_OFFSET_RESET_CONFIG] = "earliest"
+        props[ConsumerConfig.METADATA_MAX_AGE_CONFIG] = "1000"
+        props[ConsumerConfig.REQUEST_TIMEOUT_MS_CONFIG] = "2000"
         DefaultKafkaConsumerFactory<String, String>(
             props,
             StringDeserializer(),
@@ -117,7 +119,7 @@ class PublishE2ETest {
 
         // check events published to kafka
         val records = KafkaTestUtils.getRecords(consumer, Duration.ofSeconds(30))
-        val publishedEvents = records.records(topicName).map { parseJson<OrderPlacedEvent>(it.value(), objectMapper) }
+        val publishedEvents = records.records(topicName).map { parseJson<Event>(it.value(), objectMapper) }
         val expectedEvents = orderRepo.findAll().map { it.toOrderPlacedEvent() }
         assertThat(publishedEvents)
             .usingRecursiveFieldByFieldElementComparator(

@@ -16,7 +16,7 @@ import org.springframework.context.annotation.Import
 @Import(PgTestContainer::class)
 class JCacheTest {
     @Autowired
-    private lateinit var repo: IOrderRepository
+    private lateinit var repo: OrderRepository
 
     @Autowired
     private lateinit var entityManagerFactory: EntityManagerFactory

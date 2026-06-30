@@ -16,9 +16,10 @@ group transactional
 end
 API -> U : order
 
-group listener on `outbox_insert_channel`
+group listener on `outbox_channel`
     API <--> DB: listen/notify
-    note right: trigger on insert that notify **`outbox_insert_channel`**
+    note left: manual CDC
+    note right: trigger on insert that notify **`outbox_channel`**
     loop until no unpublished outbox is retrieved
         note across: **drain service** keep draining unpublished outboxes until none is left then sleeps
         API --> DB : get unpublished outbox batch

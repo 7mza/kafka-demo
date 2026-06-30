@@ -1,16 +1,15 @@
 # test YAML should mirror main YAML as much as possible for GraalVM tracing agent to intercept everything
 # general exceptions to this rule are testcontainers service connections
 custom:
-  orders:
-    batch_size: 10
-    max_attempts: 10
-    min_insync_replicas: 1
-    partitions: 1
-    poll_delay: PT24H
-    poll_initial_delay: PT24H
-    publish_timeout: PT5S
-    replication_factor: 1
-    topic_name: orders.placed
+  batch_size: 10
+  max_attempts: 10
+  min_insync_replicas: 1
+  partitions: 1
+  poll_delay: PT24H
+  poll_initial_delay: PT24H
+  publish_timeout: PT5S
+  replication_factor: 1
+  topic_name: orders.placed
 logbook:
   format:
     style: http
@@ -37,6 +36,8 @@ management:
       enabled: true
     readinessstate:
       enabled: true
+preliquibase:
+  enabled: false
 server:
   compression:
     additional-mime-types: application/x-ndjson,text/event-stream
@@ -84,8 +85,6 @@ spring:
         jpa:
           compliance:
             query: false
-        type:
-          json_format_mapper: jackson3
         max_fetch_depth: 1
         order_inserts: true
         order_updates: true
@@ -97,17 +96,28 @@ spring:
             log:
               LOG_QUERIES_SLOWER_THAN_MS: '100'
         show_sql: false
+        type:
+          json_format_mapper: jackson3
   kafka:
     admin:
       modify-topic-configs: true
     producer:
-      key-serializer: org.apache.kafka.common.serialization.StringSerializer
-      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
       acks: all
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
       properties:
         enable:
-          idempotence: true
+          idempotence: false
+        metadata:
+          max:
+            age:
+              ms: 1000
+        request:
+          timeout:
+            ms: 2000
+      retries: 0
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
   liquibase:
+    analytics-enabled: false
     drop-first: true
     enabled: false
   main:

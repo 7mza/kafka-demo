@@ -16,30 +16,30 @@ import java.util.concurrent.Executors
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)
 @Import(PgTestContainer::class)
-class IOrderOutboxRepositoryTest {
+class OutboxRepositoryTest {
     @Autowired
-    private lateinit var repo: IOrderOutboxRepository
+    private lateinit var repo: OutboxRepository
 
     @Autowired
     private lateinit var txManager: PlatformTransactionManager
 
     private val orders =
         listOf(
-            OrderOutbox(
+            Outbox(
                 id = TSIDGenerator.next(),
                 orderId = TSIDGenerator.next(),
                 eventType = "event1",
                 topic = "topic",
                 payload = "{}",
             ),
-            OrderOutbox(
+            Outbox(
                 id = TSIDGenerator.next(),
                 orderId = TSIDGenerator.next(),
                 eventType = "event2",
                 topic = "topic",
                 payload = "{}",
             ),
-            OrderOutbox(
+            Outbox(
                 id = TSIDGenerator.next(),
                 orderId = TSIDGenerator.next(),
                 eventType = "event3",
@@ -47,7 +47,7 @@ class IOrderOutboxRepositoryTest {
                 payload = "{}",
                 publishedAt = Instant.now(),
             ),
-            OrderOutbox(
+            Outbox(
                 id = TSIDGenerator.next(),
                 orderId = TSIDGenerator.next(),
                 eventType = "event4",
@@ -91,8 +91,8 @@ class IOrderOutboxRepositoryTest {
         val secondAttemptDone = CountDownLatch(1)
         val pool = Executors.newFixedThreadPool(2)
 
-        var firstBatch: List<OrderOutbox> = emptyList()
-        var secondBatch: List<OrderOutbox> = emptyList()
+        var firstBatch: List<Outbox> = emptyList()
+        var secondBatch: List<Outbox> = emptyList()
 
         val first =
             pool.submit {

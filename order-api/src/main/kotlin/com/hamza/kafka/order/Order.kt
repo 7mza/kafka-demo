@@ -43,7 +43,7 @@ data class Item(
 @Cacheable
 @Cache(usage = CacheConcurrencyStrategy.READ_WRITE, region = "orders")
 class Order(
-    override var id: String = TSIDGenerator.next(),
+    id: String = TSIDGenerator.next(),
     //
     @field:Column(nullable = false, length = 13)
     @field:NotBlank
@@ -56,12 +56,8 @@ class Order(
     @field:NotEmpty
     var items: List<@Valid Item>,
 ) : BaseEntity(id) {
-    override fun equals(other: Any?) = this === other || (other is Order && this.id == other.id)
-
-    override fun hashCode() = this.id.hashCode()
-
     fun toOrderPlacedEvent() =
-        OrderPlacedEvent(
+        Event(
             orderId = this.id,
             customerId = this.customerId,
             items = this.items, // FIXME: decouple
@@ -77,4 +73,4 @@ class Order(
         )
 }
 
-interface IOrderRepository : JpaRepository<Order, String>
+interface OrderRepository : JpaRepository<Order, String>

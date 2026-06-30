@@ -20,10 +20,9 @@ import java.time.Duration
 @SpringBootTest(
     webEnvironment = SpringBootTest.WebEnvironment.NONE,
     properties = [
-        "custom.orders.min_insync_replicas=3",
-        "custom.orders.partitions=3",
-        "custom.orders.replication_factor=3",
-        "spring.kafka.producer.properties.metadata.max.age.ms=1000",
+        "custom.min_insync_replicas=3",
+        "custom.partitions=3",
+        "custom.replication_factor=3",
     ],
 )
 @Import(PgTestContainer::class, KafkaReplicationTestContainers::class)
@@ -37,7 +36,7 @@ class KafkaMinInSyncReplicasTest {
     @Autowired
     private lateinit var objectMapper: ObjectMapper
 
-    @Value($$"${custom.orders.topic_name}")
+    @Value($$"${custom.topic_name}")
     private lateinit var topicName: String
 
     private val broker1 = KafkaReplicationTestContainers.broker1
@@ -78,12 +77,12 @@ class KafkaMinInSyncReplicasTest {
         }
 
         val outbox =
-            OrderPlacedEvent(
+            Event(
                 orderId = "order_2203",
                 customerId = "user_2203",
                 items = listOf(Item(sku = "sku-01", quantity = 1, unitPriceCents = 100)),
                 totalAmountCents = 100,
-            ).toOrderOutbox(objectMapper, topicName)
+            ).toOutbox(objectMapper, topicName)
 
         // broker reject with NotEnoughReplicasException (transient failure)
         // publish should return empty (nothing succeeded) and attempts must not be inc

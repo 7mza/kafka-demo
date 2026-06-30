@@ -2,4 +2,4 @@ databaseChangeLog:
   - include:
       file: db/changelog/000_DDL.sql
   - include:
-      file: db/changelog/001_NOTIFY_TRIGGER.sql
+      file: db/changelog/001_OUTBOX_NOTIFY.sql

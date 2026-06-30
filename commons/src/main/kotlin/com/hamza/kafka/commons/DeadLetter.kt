@@ -1,4 +1,4 @@
-package com.hamza.kafka.order
+package com.hamza.kafka.commons
 
 import org.springframework.data.jpa.repository.Query
 import org.springframework.data.repository.Repository
@@ -16,7 +16,7 @@ interface DeadLetterProjection {
     val lastErrorAt: Instant
 }
 
-interface IDeadLetterOutboxRepository : Repository<OrderOutbox, String> {
-    @Query(value = """select * from dead_letter_outbox order by "lastErrorAt" desc""", nativeQuery = true)
+interface BaseDeadLetterRepository<T : BaseOutbox> : Repository<T, String> {
+    @Query(value = """select * from dead_letters order by "lastErrorAt" desc""", nativeQuery = true)
     fun findAll(): List<DeadLetterProjection>
 }

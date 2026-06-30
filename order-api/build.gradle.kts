@@ -12,11 +12,13 @@ version = "0.0.1"
 
 val logbookSpringVersion = "4.0.4"
 val openapiVersion = "3.0.3"
+val preLiquibaseVersion = "2.0.0"
 
 dependencies {
     developmentOnly("org.springframework.boot:spring-boot-devtools")
     developmentOnly("org.springframework.boot:spring-boot-docker-compose")
 
+    implementation("net.lbruun.springboot:preliquibase-spring-boot-starter:$preLiquibaseVersion")
     implementation("org.ehcache:ehcache::jakarta")
     implementation("org.hibernate.orm:hibernate-jcache")
     implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:$openapiVersion")
@@ -50,7 +52,12 @@ tasks {
         // https://graalvm.github.io/native-build-tools/latest/gradle-plugin.html
         if (project.hasProperty("generateMetadata")) {
             val metadataDir = "$projectDir/src/main/resources/META-INF/native-image/"
-            doFirst { delete(file("$metadataDir/reachability-metadata.json")) }
+            doFirst {
+                delete(
+                    file("$metadataDir/.lock"),
+                    file("$metadataDir/reachability-metadata.json"),
+                )
+            }
             jvmArgs("-agentlib:native-image-agent=config-merge-dir=$metadataDir")
             maxParallelForks = 1
             forkEvery = 0

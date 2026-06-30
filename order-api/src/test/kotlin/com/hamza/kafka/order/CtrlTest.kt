@@ -229,7 +229,7 @@ class CtrlTest {
     fun getOutboxByOrderId() {
         val order =
             Order(customerId = "user-2203", items = listOf(Item(sku = "sku-01", quantity = 10, unitPriceCents = 199)))
-        val outbox = order.toOrderPlacedEvent().toOrderOutbox(objectMapper, "")
+        val outbox = order.toOrderPlacedEvent().toOutbox(objectMapper, "")
 
         whenever(service.getOutboxByOrderId(anyString())).thenReturn(outbox)
 

@@ -20,7 +20,7 @@ import java.time.Duration
 @SpringBootTest(
     webEnvironment = SpringBootTest.WebEnvironment.NONE,
     properties = [
-        "custom.orders.batch_size=0",
+        "custom.batch_size=0",
         "spring.jpa.hibernate.ddl-auto=validate",
         "spring.liquibase.enabled=true",
     ],
@@ -28,10 +28,10 @@ import java.time.Duration
 @Import(PausablePgTestContainer::class)
 class OutboxInsertionListenerTest {
     @Autowired
-    private lateinit var orderRepo: IOrderRepository
+    private lateinit var orderRepo: OrderRepository
 
     @Autowired
-    private lateinit var outboxRepo: IOrderOutboxRepository
+    private lateinit var outboxRepo: OutboxRepository
 
     @Autowired
     private lateinit var persistenceService: IPersistenceService

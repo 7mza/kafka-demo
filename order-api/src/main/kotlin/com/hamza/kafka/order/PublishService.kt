@@ -18,26 +18,26 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeoutException
 
 interface IPublishService {
-    fun publish(orders: List<OrderOutbox>): List<OrderOutbox>
+    fun publish(orders: List<Outbox>): List<Outbox>
 }
 
 @Service
 class PublishService(
-    private val kafkaTemplate: KafkaTemplate<String, OrderPlacedEvent>,
+    private val kafkaTemplate: KafkaTemplate<String, Event>,
     private val objectMapper: ObjectMapper,
-    @Value($$"${custom.orders.publish_timeout}") private val publishTimeout: Duration,
-    @Value($$"${custom.orders.max_attempts}") private val maxAttempts: Int,
+    @Value($$"${custom.publish_timeout}") private val publishTimeout: Duration,
+    @Value($$"${custom.max_attempts}") private val maxAttempts: Int,
 ) : IPublishService {
     private val logger = LoggerFactory.getLogger(javaClass)
 
     @Transactional
-    override fun publish(orders: List<OrderOutbox>): List<OrderOutbox> {
+    override fun publish(orders: List<Outbox>): List<Outbox> {
         val executor = Executors.newVirtualThreadPerTaskExecutor()
         try {
             val pending =
                 orders.map {
                     it to
-                        executor.submit<SendResult<String, OrderPlacedEvent>> {
+                        executor.submit<SendResult<String, Event>> {
                             // exception here will only fail this task future, other tasks are not affected
                             // exception sits on this future until .get() below is called
                             kafkaTemplate

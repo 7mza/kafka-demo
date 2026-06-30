@@ -12,21 +12,21 @@ loop
     note right: **only processed once**
     alt never processed before
         group transactional
-            SERVICE --> DB: save event as processed
             SERVICE --> SERVICE: process order
             note right: for demo: randomly accept or reject order\n(accepted/rejected topics)
+            SERVICE --> DB: save event as processed
             SERVICE --> SERVICE: create outbox
             SERVICE --> DB: save outbox
         end
         SERVICE --> K: ACK
-        note right: commit offset\nif it fails idempotency check will ignore it
+        note right: commit read offset\nif it fails idempotency check will ignore it
     else already processed
         SERVICE --> SERVICE: skip
     end
 end
 
-group listener on `outbox_insert_channel`
-    SERVICE <--> DB
+group listener on `outbox_channel`
+    SERVICE <--> DB: listen/notify
     note across: same flow as ORDER_API
 end
 
