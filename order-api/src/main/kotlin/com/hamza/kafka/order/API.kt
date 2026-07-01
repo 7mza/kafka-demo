@@ -1,5 +1,6 @@
 package com.hamza.kafka.order
 
+import com.hamza.kafka.commons.DeadLetterProjection
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.Parameter
 import io.swagger.v3.oas.annotations.media.Content
@@ -18,12 +19,11 @@ import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
-import org.springframework.web.bind.annotation.RestController
 import org.springframework.web.util.UriComponentsBuilder
 
 @Tag(name = "order", description = "orders ops")
 @RequestMapping(value = ["/api/order"], produces = [MediaType.APPLICATION_JSON_VALUE])
-interface IApi {
+interface API {
     @PostMapping
     @Operation(
         summary = "Create a single order",
@@ -145,22 +145,25 @@ Publishing poller will pick it in batches in next polls.
     fun getOutboxByOrderId(
         @Parameter(description = "order id") @PathVariable @NotBlank @Size(min = 13, max = 13) id: String,
     ): OrderOutboxDto
-}
 
-@RestController
-class Ctrl(
-    private val service: IPersistenceService,
-) : IApi {
-    override fun save(
-        request: OrderPostDto,
-        uriBuilder: UriComponentsBuilder,
-    ): ResponseEntity<OrderGetDto> {
-        val response = service.save(request).toDto()
-        val uri = uriBuilder.path("/api/order/{id}").buildAndExpand(response.id).toUri()
-        return ResponseEntity.created(uri).body(response)
-    }
-
-    override fun getOrderById(id: String) = service.getOrderById(id).toDto()
-
-    override fun getOutboxByOrderId(id: String) = service.getOutboxByOrderId(id).toDto()
+    @GetMapping("/dl")
+    @Operation(
+        summary = "Get dead letter outbox messages",
+        description = "Outboxes exceeded max_attempts & are excluded from future publishing polls",
+    )
+    @ApiResponses(
+        value = [
+            ApiResponse(
+                responseCode = "200",
+                description = "OK",
+                content = [
+                    Content(
+                        mediaType = MediaType.APPLICATION_JSON_VALUE,
+                        schema = Schema(implementation = DeadLetterProjection::class),
+                    ),
+                ],
+            ),
+        ],
+    )
+    fun getDeadLetters(): List<DeadLetterProjection>
 }

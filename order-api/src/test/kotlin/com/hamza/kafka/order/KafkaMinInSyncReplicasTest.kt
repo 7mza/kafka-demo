@@ -86,7 +86,7 @@ class KafkaMinInSyncReplicasTest {
 
         // broker reject with NotEnoughReplicasException (transient failure)
         // publish should return empty (nothing succeeded) and attempts must not be inc
-        assertThat(service.publish(listOf(outbox))).isEmpty()
+        service.publish(listOf(outbox)).also { assertThat(it.publishedCount).isZero }
         assertThat(outbox.attempts).isZero
         assertThat(outbox.publishedAt).isNull()
 

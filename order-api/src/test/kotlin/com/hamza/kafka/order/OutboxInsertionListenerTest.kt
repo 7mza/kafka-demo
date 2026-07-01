@@ -37,7 +37,7 @@ class OutboxInsertionListenerTest {
     private lateinit var persistenceService: IPersistenceService
 
     @MockitoSpyBean
-    private lateinit var trigger: IDrainServiceTrigger
+    private lateinit var trigger: IDrainTrigger
 
     @Autowired
     private lateinit var pPgContainer: PostgreSQLContainer

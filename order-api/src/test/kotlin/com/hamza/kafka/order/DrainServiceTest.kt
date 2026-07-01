@@ -35,7 +35,7 @@ class DrainServiceTest {
     private lateinit var persistenceService: IPersistenceService
 
     @MockitoSpyBean
-    private lateinit var trigger: IDrainServiceTrigger
+    private lateinit var trigger: IDrainTrigger
 
     @MockitoSpyBean
     private lateinit var drainService: IDrainService

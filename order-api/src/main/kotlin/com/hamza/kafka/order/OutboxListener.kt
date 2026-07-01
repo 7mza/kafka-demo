@@ -16,7 +16,7 @@ interface IOutboxListener : ApplicationListener<ApplicationReadyEvent> {
 @Component
 class OutboxListener(
     private val dataSource: DataSource,
-    private val service: IDrainServiceTrigger,
+    private val trigger: IDrainTrigger,
 ) : IOutboxListener {
     private val logger = LoggerFactory.getLogger(javaClass)
 
@@ -38,7 +38,7 @@ class OutboxListener(
                         val notifications = pgConn.getNotifications(10_000)
                         if (!notifications.isNullOrEmpty()) {
                             logger.info("Received {} notifications, triggering DrainService", notifications.size)
-                            service.trigger()
+                            trigger.trigger()
                         }
                     }
                 }

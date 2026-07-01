@@ -9,11 +9,11 @@ interface IPollingService {
 
 @Service
 class PollingService(
-    private val service: IDrainServiceTrigger,
+    private val trigger: IDrainTrigger,
 ) : IPollingService {
     @Scheduled(
         initialDelayString = $$"${custom.poll_initial_delay}",
         fixedDelayString = $$"${custom.poll_delay}",
     )
-    override fun poll() = service.trigger()
+    override fun poll() = trigger.trigger()
 }

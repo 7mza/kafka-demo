@@ -71,9 +71,7 @@ class PublishServiceTest {
 
         // publish event to kafka
         service.publish(listOf(outbox)).also {
-            assertThat(it).hasSize(1)
-            assertThat(it[0].publishedAt).isNotNull // check outbox published
-            assertThat(it[0].attempts).isZero
+            assertThat(it.publishedCount).isOne
         }
 
         // check event was sent to kafka

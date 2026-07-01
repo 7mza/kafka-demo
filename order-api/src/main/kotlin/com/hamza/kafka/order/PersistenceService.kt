@@ -1,5 +1,6 @@
 package com.hamza.kafka.order
 
+import com.hamza.kafka.commons.DeadLetterProjection
 import com.hamza.kafka.commons.ResourceNotFoundException
 import jakarta.transaction.Transactional
 import org.springframework.beans.factory.annotation.Value
@@ -12,12 +13,15 @@ interface IPersistenceService {
     fun getOrderById(id: String): Order
 
     fun getOutboxByOrderId(id: String): Outbox
+
+    fun getDeadLetters(): List<DeadLetterProjection>
 }
 
 @Service
 class PersistenceService(
     private val orderRepo: OrderRepository,
     private val orderOutboxRepo: OutboxRepository,
+    private val deadLetterRepo: DeadLetterRepository,
     private val objectMapper: ObjectMapper,
     @Value($$"${custom.topic_name}") private val topicName: String,
 ) : IPersistenceService {
@@ -37,4 +41,6 @@ class PersistenceService(
 
     override fun getOutboxByOrderId(id: String) =
         orderOutboxRepo.findByOrderId(id) ?: throw ResourceNotFoundException(id = id, name = "OrderOutbox")
+
+    override fun getDeadLetters(): List<DeadLetterProjection> = deadLetterRepo.findAll()
 }

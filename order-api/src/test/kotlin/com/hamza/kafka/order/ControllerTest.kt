@@ -20,9 +20,9 @@ import org.springframework.test.web.servlet.client.RestTestClient
 import org.springframework.test.web.servlet.client.expectBody
 import tools.jackson.databind.ObjectMapper
 
-@WebMvcTest(controllers = [Ctrl::class])
+@WebMvcTest(controllers = [Controller::class])
 @AutoConfigureRestTestClient
-class CtrlTest {
+class ControllerTest {
     @MockitoBean
     private lateinit var service: IPersistenceService
 

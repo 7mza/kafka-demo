@@ -22,6 +22,7 @@ logging:
   include-application-name: false
   level:
     com.hamza: debug
+    org.apache.kafka: error
     org.hibernate:
       SQL: debug
       stat: debug

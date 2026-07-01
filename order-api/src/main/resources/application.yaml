@@ -20,6 +20,7 @@ logging:
   include-application-name: false
   level:
     com.hamza: info
+    org.apache.kafka: warn
     org.hibernate:
       SQL: debug
       stat: debug

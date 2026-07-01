@@ -19,13 +19,13 @@ class PollingServiceTest {
     private lateinit var service: IPollingService
 
     @MockitoSpyBean
-    private lateinit var dService: IDrainServiceTrigger
+    private lateinit var trigger: IDrainTrigger
 
     @Test
     fun `@Scheduled should trigger poll automatically`() {
         await().atMost(Duration.ofSeconds(10)).untilAsserted {
             verify(service, atLeastOnce()).poll()
-            verify(dService, atLeastOnce()).trigger()
+            verify(trigger, atLeastOnce()).trigger()
         }
     }
 }

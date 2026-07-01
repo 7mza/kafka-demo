@@ -17,8 +17,14 @@ import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeoutException
 
+data class PublishResult(
+    var publishedCount: Int = 0,
+    var recoverableErrorsCount: Int = 0,
+    var deadLettersCount: Int = 0,
+)
+
 interface IPublishService {
-    fun publish(orders: List<Outbox>): List<Outbox>
+    fun publish(orders: List<Outbox>): PublishResult
 }
 
 @Service
@@ -31,8 +37,9 @@ class PublishService(
     private val logger = LoggerFactory.getLogger(javaClass)
 
     @Transactional
-    override fun publish(orders: List<Outbox>): List<Outbox> {
+    override fun publish(orders: List<Outbox>): PublishResult {
         val executor = Executors.newVirtualThreadPerTaskExecutor()
+        val result = PublishResult()
         try {
             val pending =
                 orders.map {
@@ -40,23 +47,27 @@ class PublishService(
                         executor.submit<SendResult<String, Event>> {
                             // exception here will only fail this task future, other tasks are not affected
                             // exception sits on this future until .get() below is called
+                            val event = parseJson<Event>(it.payload, objectMapper)
+                            // for demo: force permanent ex so this outbox dead letters after max_attempts
+                            check(!event.customerId.contains("fail")) { "forced failure for demo" }
                             kafkaTemplate
-                                .send(it.topic, it.orderId, parseJson(it.payload, objectMapper))
+                                .send(it.topic, it.orderId, event)
                                 // how long to wait for Kafka to ack write
                                 .get(publishTimeout.toNanos(), TimeUnit.NANOSECONDS)
                         }
                 }
-            return pending.mapNotNull { (outbox, future) ->
+            pending.forEach { (outbox, future) ->
                 try {
                     // backstop if .send() above is stuck before the timeout start counting
                     // normally this should return instantly since task is already done
                     future.get(publishTimeout.toNanos(), TimeUnit.NANOSECONDS)
+                    result.publishedCount++
                     outbox.publishedAt = Instant.now().truncatedTo(ChronoUnit.MILLIS)
-                    outbox
                 } catch (ex: Exception) {
                     // catch both: task failure + backstop (giving up waiting on it)
                     val rootCause = ExceptionUtils.getRootCause(ex) ?: ex
                     if (rootCause is RetriableException || rootCause is TimeoutException) {
+                        result.recoverableErrorsCount++
                         // transient ex (broker unreachable, isr below min_inSync, leader election in progress, ...)
                         // don't inc attempts, next polls should retry
                         logger.warn(
@@ -70,6 +81,7 @@ class PublishService(
                         // inc attempts, next polls should retry with upper limit
                         outbox.attempts++
                         if (outbox.attempts >= maxAttempts) {
+                            result.deadLettersCount++
                             logger.error(
                                 "dead letter outbox: '{}', topic: '{}', excluded from future polls",
                                 outbox.id,
@@ -83,9 +95,9 @@ class PublishService(
                             logger.error("failed to publish outbox: '{}', topic: '{}'", outbox.id, outbox.topic, ex)
                         }
                     }
-                    null
                 }
             }
+            return result
         } finally {
             executor.shutdownNow()
         }

@@ -150,9 +150,7 @@ class KafkaReplicationTest {
         val outbox = event.toOutbox(objectMapper, topicName)
 
         service.publish(listOf(outbox)).also {
-            assertThat(it).hasSize(1)
-            assertThat(it[0].publishedAt).isNotNull
-            assertThat(it[0].attempts).isZero
+            assertThat(it.publishedCount).isOne
         }
 
         // check event is retrievable

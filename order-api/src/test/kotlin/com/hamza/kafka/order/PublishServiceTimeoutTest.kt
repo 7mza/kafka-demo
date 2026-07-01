@@ -86,7 +86,7 @@ class PublishServiceTimeoutTest {
 
         // publish event to kafka
         service.publish(listOf(outbox)).also {
-            assertThat(it).isEmpty() // kafka is paused, nothing succeeds
+            assertThat(it.publishedCount).isZero // kafka is paused, nothing succeeds
         }
         // timeout is a transient infrastructure failure, attempts should not be inc
         assertThat(outbox.attempts).isZero
