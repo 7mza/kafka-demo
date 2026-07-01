@@ -20,6 +20,7 @@ import org.springframework.test.web.servlet.client.expectBody
 import org.testcontainers.kafka.KafkaContainer
 import tools.jackson.databind.ObjectMapper
 import java.time.Duration
+import java.util.UUID
 
 @SpringBootTest(
     webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
@@ -47,13 +48,8 @@ class PublishE2ETest {
     private lateinit var topicName: String
 
     private val consumer by lazy {
-        val props =
-            KafkaTestUtils.consumerProps(
-                kafkaContainer.bootstrapServers,
-                "order-e2e-test",
-                true,
-            )
-        props[ConsumerConfig.AUTO_OFFSET_RESET_CONFIG] = "earliest"
+        val props = KafkaTestUtils.consumerProps(kafkaContainer.bootstrapServers, "${UUID.randomUUID()}", true)
+        props[ConsumerConfig.AUTO_OFFSET_RESET_CONFIG] = "latest"
         props[ConsumerConfig.METADATA_MAX_AGE_CONFIG] = "1000"
         props[ConsumerConfig.REQUEST_TIMEOUT_MS_CONFIG] = "2000"
         DefaultKafkaConsumerFactory<String, String>(
@@ -72,6 +68,10 @@ class PublishE2ETest {
     fun `publish orders end to end integration test`() {
         // subscribe to kafka
         consumer.subscribe(listOf(topicName))
+        await().atMost(Duration.ofSeconds(10)).until {
+            consumer.poll(Duration.ofMillis(500))
+            consumer.assignment().isNotEmpty()
+        }
 
         // post 3 orders
         val requestsById =

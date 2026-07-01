@@ -21,6 +21,7 @@ import org.testcontainers.DockerClientFactory
 import org.testcontainers.junit.jupiter.Testcontainers
 import tools.jackson.databind.ObjectMapper
 import java.time.Duration
+import java.util.UUID
 import java.util.concurrent.TimeUnit
 
 fun AdminClient.describeTopicPartitions(topicName: String): List<TopicPartitionInfo> =
@@ -38,6 +39,7 @@ fun AdminClient.describeTopicPartitions(topicName: String): List<TopicPartitionI
         "custom.publish_timeout=PT1M", // loosen timeout
         "custom.replication_factor=3",
         "custom.topic_name=replication-test",
+        "spring.kafka.producer.properties.request.timeout.ms=5000",
     ],
 )
 @Import(PgTestContainer::class, KafkaReplicationTestContainers::class)
@@ -68,10 +70,10 @@ class KafkaReplicationTest {
     private val dockerClient = DockerClientFactory.instance().client()
 
     private val consumer by lazy {
-        val props = KafkaTestUtils.consumerProps(bootstrapServers, "replication-test", true)
-        props[ConsumerConfig.AUTO_OFFSET_RESET_CONFIG] = "earliest"
+        val props = KafkaTestUtils.consumerProps(bootstrapServers, "${UUID.randomUUID()}", true)
+        props[ConsumerConfig.AUTO_OFFSET_RESET_CONFIG] = "latest"
         props[ConsumerConfig.METADATA_MAX_AGE_CONFIG] = "1000"
-        props[ConsumerConfig.REQUEST_TIMEOUT_MS_CONFIG] = "2000"
+        props[ConsumerConfig.REQUEST_TIMEOUT_MS_CONFIG] = "5000"
         DefaultKafkaConsumerFactory<String, String>(
             props,
             StringDeserializer(),
@@ -103,6 +105,10 @@ class KafkaReplicationTest {
     fun `publishing still succeeds and topic stays readable when one broker is down`() {
         // subscribe before pause so consumer is aware of everything
         consumer.subscribe(listOf(topicName))
+        await().atMost(Duration.ofSeconds(10)).until {
+            consumer.poll(Duration.ofMillis(500))
+            consumer.assignment().isNotEmpty()
+        }
 
         // get leader
         val leaderBefore =

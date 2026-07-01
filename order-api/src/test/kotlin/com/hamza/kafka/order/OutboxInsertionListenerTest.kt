@@ -69,11 +69,11 @@ class OutboxInsertionListenerTest {
         }
 
         dockerClient.pauseContainerCmd(pPgContainer.containerId).exec()
-        await().atMost(Duration.ofSeconds(5))
+        Thread.sleep(Duration.ofSeconds(5).toMillis())
         dockerClient.unpauseContainerCmd(pPgContainer.containerId).exec()
 
+        persistenceService.save(request)
         await().atMost(Duration.ofSeconds(15)).untilAsserted {
-            persistenceService.save(request)
             verify(trigger, times(2)).trigger()
         }
     }

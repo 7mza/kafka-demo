@@ -59,12 +59,12 @@ class KafkaReplicationTestContainers {
                 .withNetwork(network)
                 .withNetworkAliases("broker1")
                 .withEnv("KAFKA_BROKER_HEARTBEAT_INTERVAL_MS", "1000")
-                .withEnv("KAFKA_BROKER_SESSION_TIMEOUT_MS", "2000")
+                .withEnv("KAFKA_BROKER_SESSION_TIMEOUT_MS", "6000")
                 .withEnv("KAFKA_CONTROLLER_QUORUM_VOTERS", VOTERS)
                 .withEnv("KAFKA_NODE_ID", "1")
                 .withEnv("KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR", "3")
                 .withEnv("KAFKA_PROCESS_ROLES", "broker,controller")
-                .withEnv("KAFKA_REPLICA_LAG_TIME_MAX_MS", "2000")
+                .withEnv("KAFKA_REPLICA_LAG_TIME_MAX_MS", "10000")
                 .withEnv("KAFKA_PROCESS_ROLES", "broker,controller")
 
         val broker2: KafkaContainer =
@@ -72,24 +72,24 @@ class KafkaReplicationTestContainers {
                 .withNetwork(network)
                 .withNetworkAliases("broker2")
                 .withEnv("KAFKA_BROKER_HEARTBEAT_INTERVAL_MS", "1000")
-                .withEnv("KAFKA_BROKER_SESSION_TIMEOUT_MS", "2000")
+                .withEnv("KAFKA_BROKER_SESSION_TIMEOUT_MS", "6000")
                 .withEnv("KAFKA_CONTROLLER_QUORUM_VOTERS", VOTERS)
                 .withEnv("KAFKA_NODE_ID", "2")
                 .withEnv("KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR", "3")
                 .withEnv("KAFKA_PROCESS_ROLES", "broker,controller")
-                .withEnv("KAFKA_REPLICA_LAG_TIME_MAX_MS", "2000")
+                .withEnv("KAFKA_REPLICA_LAG_TIME_MAX_MS", "10000")
 
         val broker3: KafkaContainer =
             KafkaContainer(DockerImageName.parse("apache/kafka:latest"))
                 .withNetwork(network)
                 .withNetworkAliases("broker3")
                 .withEnv("KAFKA_BROKER_HEARTBEAT_INTERVAL_MS", "1000")
-                .withEnv("KAFKA_BROKER_SESSION_TIMEOUT_MS", "2000")
+                .withEnv("KAFKA_BROKER_SESSION_TIMEOUT_MS", "6000")
                 .withEnv("KAFKA_CONTROLLER_QUORUM_VOTERS", VOTERS)
                 .withEnv("KAFKA_NODE_ID", "3")
                 .withEnv("KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR", "3")
                 .withEnv("KAFKA_PROCESS_ROLES", "broker,controller")
-                .withEnv("KAFKA_REPLICA_LAG_TIME_MAX_MS", "2000")
+                .withEnv("KAFKA_REPLICA_LAG_TIME_MAX_MS", "10000")
 
         init {
             /*

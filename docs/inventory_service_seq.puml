@@ -6,10 +6,10 @@ database DATABASE as DB
 queue KAFKA as K
 
 loop
+    note across: N concurrent listener: **1 per partition**
     SERVICE --> K: listen
     K --> SERVICE: consume events
-    SERVICE --> DB: check idempotency
-    note right: **only processed once**
+    note across: check idempotency: **only processed once**
     alt never processed before
         group transactional
             SERVICE --> SERVICE: process order
@@ -18,11 +18,11 @@ loop
             SERVICE --> SERVICE: create outbox
             SERVICE --> DB: save outbox
         end
-        SERVICE --> K: ACK
-        note right: commit read offset\nif it fails idempotency check will ignore it
     else already processed
         SERVICE --> SERVICE: skip
     end
+    SERVICE --> K: ACK
+    note right: commit read offset\nif it fails idempotency check will ignore it
 end
 
 group listener on `outbox_channel`

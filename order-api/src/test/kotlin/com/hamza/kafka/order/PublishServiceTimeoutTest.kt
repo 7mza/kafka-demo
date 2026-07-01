@@ -3,6 +3,7 @@ package com.hamza.kafka.order
 import org.apache.kafka.clients.consumer.ConsumerConfig
 import org.apache.kafka.common.serialization.StringDeserializer
 import org.assertj.core.api.Assertions.assertThat
+import org.awaitility.Awaitility.await
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
@@ -15,6 +16,7 @@ import org.testcontainers.DockerClientFactory
 import org.testcontainers.kafka.KafkaContainer
 import tools.jackson.databind.ObjectMapper
 import java.time.Duration
+import java.util.UUID
 import kotlin.collections.set
 
 @SpringBootTest(
@@ -36,13 +38,8 @@ class PublishServiceTimeoutTest {
     private lateinit var topicName: String
 
     private val consumer by lazy {
-        val props =
-            KafkaTestUtils.consumerProps(
-                pKafkaContainer.bootstrapServers,
-                "publish-service-test",
-                true,
-            )
-        props[ConsumerConfig.AUTO_OFFSET_RESET_CONFIG] = "earliest"
+        val props = KafkaTestUtils.consumerProps(pKafkaContainer.bootstrapServers, "${UUID.randomUUID()}", true)
+        props[ConsumerConfig.AUTO_OFFSET_RESET_CONFIG] = "latest"
         props[ConsumerConfig.METADATA_MAX_AGE_CONFIG] = "1000"
         props[ConsumerConfig.REQUEST_TIMEOUT_MS_CONFIG] = "2000"
         DefaultKafkaConsumerFactory<String, String>(
@@ -79,6 +76,10 @@ class PublishServiceTimeoutTest {
 
         // subscribe to kafka
         consumer.subscribe(listOf(topicName))
+        await().atMost(Duration.ofSeconds(10)).until {
+            consumer.poll(Duration.ofMillis(500))
+            consumer.assignment().isNotEmpty()
+        }
 
         // pause kafka
         dockerClient.pauseContainerCmd(pKafkaContainer.containerId).exec()

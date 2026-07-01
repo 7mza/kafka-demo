@@ -3,6 +3,7 @@ package com.hamza.kafka.order
 import org.apache.kafka.clients.consumer.ConsumerConfig
 import org.apache.kafka.common.serialization.StringDeserializer
 import org.assertj.core.api.Assertions.assertThat
+import org.awaitility.Awaitility.await
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
@@ -14,6 +15,7 @@ import org.springframework.kafka.test.utils.KafkaTestUtils
 import org.testcontainers.kafka.KafkaContainer
 import tools.jackson.databind.ObjectMapper
 import java.time.Duration
+import java.util.UUID
 
 @SpringBootTest(
     webEnvironment = SpringBootTest.WebEnvironment.NONE,
@@ -34,13 +36,8 @@ class KafkaPartitionTest {
     private lateinit var topicName: String
 
     private val consumer by lazy {
-        val props =
-            KafkaTestUtils.consumerProps(
-                kafkaContainer.bootstrapServers,
-                "publish-service-test",
-                true,
-            )
-        props[ConsumerConfig.AUTO_OFFSET_RESET_CONFIG] = "earliest"
+        val props = KafkaTestUtils.consumerProps(kafkaContainer.bootstrapServers, "${UUID.randomUUID()}", true)
+        props[ConsumerConfig.AUTO_OFFSET_RESET_CONFIG] = "latest"
         props[ConsumerConfig.METADATA_MAX_AGE_CONFIG] = "1000"
         props[ConsumerConfig.REQUEST_TIMEOUT_MS_CONFIG] = "2000"
         DefaultKafkaConsumerFactory<String, String>(
@@ -60,7 +57,7 @@ class KafkaPartitionTest {
         // gen many events with same orderId
         val orderId = "order_2203"
         val outboxes =
-            (1..5).map {
+            (1..15).map {
                 Event(
                     orderId = orderId,
                     customerId = "user_220$it",
@@ -71,6 +68,10 @@ class KafkaPartitionTest {
 
         // subscribe to kafka
         consumer.subscribe(listOf(topicName))
+        await().atMost(Duration.ofSeconds(10)).until {
+            consumer.poll(Duration.ofMillis(500))
+            consumer.assignment().isNotEmpty()
+        }
 
         // publish events to kafka
         service.publish(outboxes)
@@ -87,7 +88,7 @@ class KafkaPartitionTest {
         val outboxes =
             (1..15).map {
                 Event(
-                    orderId = "order_220$it",
+                    orderId = "order_20$it",
                     customerId = "user_220$it",
                     items = listOf(Item(sku = "sku-0$it", quantity = 1 * it, unitPriceCents = 10 * it)),
                     totalAmountCents = 1 * it * 10 * it,
@@ -96,6 +97,10 @@ class KafkaPartitionTest {
 
         // subscribe to kafka
         consumer.subscribe(listOf(topicName))
+        await().atMost(Duration.ofSeconds(10)).until {
+            consumer.poll(Duration.ofMillis(500))
+            consumer.assignment().isNotEmpty()
+        }
 
         // publish events to kafka
         service.publish(outboxes)

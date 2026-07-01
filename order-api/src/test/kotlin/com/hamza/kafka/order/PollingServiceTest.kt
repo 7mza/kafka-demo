@@ -23,11 +23,9 @@ class PollingServiceTest {
 
     @Test
     fun `@Scheduled should trigger poll automatically`() {
-        await()
-            .atMost(Duration.ofSeconds(10))
-            .untilAsserted {
-                verify(service, atLeastOnce()).poll()
-                verify(dService, atLeastOnce()).trigger()
-            }
+        await().atMost(Duration.ofSeconds(10)).untilAsserted {
+            verify(service, atLeastOnce()).poll()
+            verify(dService, atLeastOnce()).trigger()
+        }
     }
 }
