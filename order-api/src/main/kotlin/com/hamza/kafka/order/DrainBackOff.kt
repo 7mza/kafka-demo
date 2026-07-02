@@ -24,12 +24,21 @@ class DrainBackOff : IDrainBackOff {
     private val cooldownUntil = AtomicReference(Instant.MIN)
     private val consecutiveNoProgress = AtomicInteger(0)
 
+    // is cooldown still on
     override fun isActive() = Instant.now().isBefore(cooldownUntil.get())
 
+    /* observe result of publish service
+     * if we're not progressing
+     *  record for how many consecutive cycle
+     *  then use it to create a linear cooldown
+     *  this CD will prevent any drain trigger (poll, CDC, self)
+     * if we're progressing
+     *  reset
+     */
     override fun observe(result: PublishResult) {
-        if (this.isProgressing(result)) {
+        if (result.isProgressing()) {
             consecutiveNoProgress.set(0)
-        } else if (result.recoverableErrorsCount > 0) {
+        } else if (result.hasRecoverable()) {
             val n = consecutiveNoProgress.incrementAndGet()
             val coolDownMs = Duration.ofMillis((n * COOLDOWN_STEP_MS).coerceAtMost(MAX_COOLDOWN_MS))
             val until = Instant.now().plus(coolDownMs)
@@ -41,6 +50,4 @@ class DrainBackOff : IDrainBackOff {
             )
         }
     }
-
-    private fun isProgressing(result: PublishResult) = result.publishedCount + result.deadLettersCount > 0
 }
