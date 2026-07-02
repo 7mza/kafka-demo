@@ -64,10 +64,7 @@ tasks {
         }
     }
 
-    withType<ProcessAot>().configureEach {
-        args("--spring.profiles.active=default,container")
-        jvmArgs("-Dorg.jboss.logging.provider=slf4j")
-    }
+    withType<ProcessAot>().configureEach { args("--spring.profiles.active=default,container") }
 
     withType<ProcessTestAot>().configureEach { jvmArgs("-XX:+EnableDynamicAgentLoading") }
 

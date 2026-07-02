@@ -72,8 +72,8 @@ services:
       JAVA_OPTS: --add-modules jdk.incubator.vector
       KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka1:19092,kafka2:19092,kafka3:19092
       KAFKA_CLUSTERS_0_NAME: local
-      LOGGING_LEVEL_IO_KAFBAT_UI: WARN
-      LOGGING_LEVEL_ROOT: WARN
+      LOGGING_LEVEL_IO_KAFBAT_UI: ERROR
+      LOGGING_LEVEL_ROOT: ERROR
     healthcheck:
       <<: *healthcheck
       test:
@@ -114,6 +114,7 @@ services:
     deploy: *deploy
     environment:
       KAFKA_BOOTSTRAP_SERVERS: ${KAFKA_BOOTSTRAP_SERVERS}
+      KAFKA_LOGGING_LEVEL: ${KAFKA_LOGGING_LEVEL}
       ORDERS_BATCH_SIZE: ${ORDERS_BATCH_SIZE}
       ORDERS_MAX_ATTEMPTS: ${ORDERS_MAX_ATTEMPTS}
       ORDERS_MIN_INSYNC_REPLICAS: ${ORDERS_MIN_INSYNC_REPLICAS}

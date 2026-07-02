@@ -1,5 +1,6 @@
 package com.hamza.kafka.order
 
+import com.hamza.kafka.commons.IDrainBackOff
 import org.slf4j.LoggerFactory
 import org.springframework.scheduling.annotation.Async
 import org.springframework.stereotype.Service
@@ -26,7 +27,7 @@ class DrainTrigger(
         try {
             while (true) {
                 if (backOff.isActive()) break
-                val result = service.drainOutboxes() ?: break
+                val result = service.drain() ?: break
                 backOff.observe(result)
             }
         } finally {

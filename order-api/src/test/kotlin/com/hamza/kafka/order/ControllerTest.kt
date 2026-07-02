@@ -1,6 +1,7 @@
 package com.hamza.kafka.order
 
 import com.hamza.kafka.commons.DeadLetterProjection
+import com.hamza.kafka.commons.DeadLettersDto
 import com.hamza.kafka.commons.ResourceNotFoundException
 import com.hamza.kafka.commons.writeJson
 import org.assertj.core.api.Assertions.assertThat

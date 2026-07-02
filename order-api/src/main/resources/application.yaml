@@ -175,6 +175,9 @@ custom:
   publish_timeout: ${ORDERS_PUBLISH_TIMEOUT}
   replication_factor: ${ORDERS_REPLICATION_FACTOR}
   topic_name: ${ORDERS_TOPIC_NAME}
+logging:
+  level:
+    org.apache.kafka: ${KAFKA_LOGGING_LEVEL:warn}
 server:
   port: 80
 spring:

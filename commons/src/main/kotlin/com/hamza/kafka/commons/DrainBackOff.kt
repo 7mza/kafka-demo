@@ -1,7 +1,6 @@
-package com.hamza.kafka.order
+package com.hamza.kafka.commons
 
 import org.slf4j.LoggerFactory
-import org.springframework.stereotype.Service
 import java.time.Clock
 import java.time.Duration
 import java.time.Instant
@@ -11,10 +10,9 @@ import java.util.concurrent.atomic.AtomicReference
 interface IDrainBackOff {
     fun isActive(): Boolean
 
-    fun observe(result: PublishResult)
+    fun observe(result: KafkaPublishResult)
 }
 
-@Service
 class DrainBackOff(
     private val clock: Clock = Clock.systemUTC(),
 ) : IDrainBackOff {
@@ -38,7 +36,7 @@ class DrainBackOff(
      * if we're progressing
      *  reset
      */
-    override fun observe(result: PublishResult) {
+    override fun observe(result: KafkaPublishResult) {
         if (result.isProgressing()) {
             consecutiveNoProgress.set(0)
         } else if (result.hasRecoverable()) {

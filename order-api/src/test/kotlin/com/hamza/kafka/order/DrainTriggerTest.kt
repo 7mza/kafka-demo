@@ -1,5 +1,6 @@
 package com.hamza.kafka.order
 
+import com.hamza.kafka.commons.IDrainBackOff
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.mock
@@ -28,7 +29,7 @@ class DrainTriggerTest {
         val exit = CountDownLatch(1)
         val calls = AtomicInteger(0)
 
-        whenever(service.drainOutboxes()).thenAnswer {
+        whenever(service.drain()).thenAnswer {
             calls.incrementAndGet()
             enter.countDown()
             exit.await()
@@ -40,13 +41,13 @@ class DrainTriggerTest {
         val a = Thread.ofVirtual().start { trigger.trigger() }
         enter.await(2, TimeUnit.SECONDS).let { assertThat(it).isTrue }
         assertThat(calls.get()).isEqualTo(1)
-        verify(service, times(1)).drainOutboxes()
+        verify(service, times(1)).drain()
 
         val b = Thread.ofVirtual().start { trigger.trigger() }
         b.join(2000)
         assertThat(b.isAlive).isFalse
         assertThat(calls.get()).isEqualTo(1)
-        verify(service, times(1)).drainOutboxes()
+        verify(service, times(1)).drain()
 
         exit.countDown()
         a.join(2000)

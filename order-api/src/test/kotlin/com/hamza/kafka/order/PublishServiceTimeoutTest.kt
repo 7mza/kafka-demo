@@ -17,7 +17,6 @@ import org.testcontainers.kafka.KafkaContainer
 import tools.jackson.databind.ObjectMapper
 import java.time.Duration
 import java.util.UUID
-import kotlin.collections.set
 
 @SpringBootTest(
     webEnvironment = SpringBootTest.WebEnvironment.NONE,

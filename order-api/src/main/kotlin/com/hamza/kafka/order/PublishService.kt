@@ -1,5 +1,6 @@
 package com.hamza.kafka.order
 
+import com.hamza.kafka.commons.KafkaPublishResult
 import com.hamza.kafka.commons.parseJson
 import jakarta.transaction.Transactional
 import org.apache.commons.lang3.exception.ExceptionUtils
@@ -17,20 +18,8 @@ import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeoutException
 
-data class PublishResult(
-    var publishedCount: Int = 0,
-    var recoverableErrorsCount: Int = 0,
-    var deadLettersCount: Int = 0,
-) {
-    // progress = getting outboxes off the backlog (whether sent to kafka or flagged as dead letters)
-    fun isProgressing() = this.publishedCount + this.deadLettersCount > 0
-
-    // used for simple linear time back off based on transient errors (if something is wrong with kafka, give it time to heal)
-    fun hasRecoverable() = this.recoverableErrorsCount > 0
-}
-
 interface IPublishService {
-    fun publish(orders: List<Outbox>): PublishResult
+    fun publish(orders: List<Outbox>): KafkaPublishResult
 }
 
 @Service
@@ -43,9 +32,9 @@ class PublishService(
     private val logger = LoggerFactory.getLogger(javaClass)
 
     @Transactional
-    override fun publish(orders: List<Outbox>): PublishResult {
+    override fun publish(orders: List<Outbox>): KafkaPublishResult {
         val executor = Executors.newVirtualThreadPerTaskExecutor()
-        val result = PublishResult()
+        val result = KafkaPublishResult()
         try {
             val pending =
                 orders.map {

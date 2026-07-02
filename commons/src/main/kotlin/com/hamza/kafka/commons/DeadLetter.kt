@@ -14,6 +14,19 @@ interface DeadLetterProjection {
     val lastError: String
     val createdAt: Instant
     val lastErrorAt: Instant
+
+    fun toDto() =
+        DeadLetterDto(
+            id = this.id,
+            orderId = this.orderId,
+            eventType = this.eventType,
+            topic = this.topic,
+            payload = this.payload,
+            attempts = this.attempts,
+            lastError = this.lastError,
+            createdAt = this.createdAt,
+            lastErrorAt = this.lastErrorAt,
+        )
 }
 
 interface BaseDeadLetterRepository<T : BaseOutbox> : Repository<T, String> {

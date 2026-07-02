@@ -1,4 +1,4 @@
-package com.hamza.kafka.order
+package com.hamza.kafka.commons
 
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
@@ -21,9 +21,9 @@ class DrainBackOffTest {
 
     private val backOff = DrainBackOff(clock)
 
-    private val progressing = PublishResult(publishedCount = 1)
+    private val progressing = KafkaPublishResult(publishedCount = 1)
 
-    private val recoverable = PublishResult(recoverableErrorsCount = 1)
+    private val recoverable = KafkaPublishResult(recoverableErrorsCount = 1)
 
     @Test
     fun `progress = no backoff`() {

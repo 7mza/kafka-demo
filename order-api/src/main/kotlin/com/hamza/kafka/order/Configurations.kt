@@ -1,5 +1,7 @@
 package com.hamza.kafka.order
 
+import com.hamza.kafka.commons.DrainBackOff
+import com.hamza.kafka.commons.IDrainBackOff
 import io.swagger.v3.oas.models.OpenAPI
 import io.swagger.v3.oas.models.info.Info
 import org.slf4j.LoggerFactory
@@ -9,7 +11,6 @@ import org.springframework.boot.ansi.AnsiOutput
 import org.springframework.boot.ansi.AnsiStyle
 import org.springframework.boot.context.event.ApplicationReadyEvent
 import org.springframework.boot.info.BuildProperties
-import org.springframework.boot.jackson.autoconfigure.JsonMapperBuilderCustomizer
 import org.springframework.boot.restclient.RestClientCustomizer
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
@@ -32,9 +33,6 @@ class Configurations(
         val message = "order-api running at $address/swagger-ui"
         logger.info(AnsiOutput.toString(AnsiColor.BRIGHT_GREEN, AnsiStyle.BOLD, message))
     }
-
-    @Bean
-    fun jacksonCustomizer() = JsonMapperBuilderCustomizer { it.findAndAddModules() }
 
     @Bean
     fun openAPI(buildProperties: BuildProperties): OpenAPI =
@@ -61,4 +59,7 @@ class Configurations(
         .replicas(replicationFactor)
         .config("min.insync.replicas", minInsyncReplicas.toString())
         .build()
+
+    @Bean
+    fun drainBackOff(): IDrainBackOff = DrainBackOff()
 }
