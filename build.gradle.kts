@@ -85,7 +85,7 @@ subprojects {
             useJUnitPlatform()
             jvmArgumentProviders += CommandLineArgumentProvider { listOf("-javaagent:${mockitoAgent.asPath}") }
             maxParallelForks = (Runtime.getRuntime().availableProcessors() / 2).coerceAtLeast(1)
-            forkEvery = 20
+            forkEvery = 10
             jvmArgs("-XX:+EnableDynamicAgentLoading")
             reports {
                 html.required = false
@@ -148,7 +148,16 @@ dependencyManagement { imports { mavenBom(SpringBootPlugin.BOM_COORDINATES) } }
 tasks {
     test { finalizedBy(testCodeCoverageReport) }
 
-    testCodeCoverageReport { reports.csv.required = true }
+    testCodeCoverageReport {
+        classDirectories.setFrom(
+            classDirectories.files.map { fileTree(it) { exclude("**/ApplicationKt.class") } },
+        )
+        reports {
+            csv.required = true
+            html.outputLocation = layout.buildDirectory.dir("jacocoHtml")
+            xml.required = false
+        }
+    }
 
     val npmRunFormat =
         register("npm_run_format", NpmTask::class) {

@@ -2,6 +2,7 @@ package com.hamza.kafka.order
 
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
+import java.time.Clock
 import java.time.Duration
 import java.time.Instant
 import java.util.concurrent.atomic.AtomicInteger
@@ -14,7 +15,9 @@ interface IDrainBackOff {
 }
 
 @Service
-class DrainBackOff : IDrainBackOff {
+class DrainBackOff(
+    private val clock: Clock = Clock.systemUTC(),
+) : IDrainBackOff {
     private companion object {
         const val COOLDOWN_STEP_MS = 10_000L
         const val MAX_COOLDOWN_MS = 60_000L
@@ -25,7 +28,7 @@ class DrainBackOff : IDrainBackOff {
     private val consecutiveNoProgress = AtomicInteger(0)
 
     // is cooldown still on
-    override fun isActive() = Instant.now().isBefore(cooldownUntil.get())
+    override fun isActive() = clock.instant().isBefore(cooldownUntil.get())
 
     /* observe result of publish service
      * if we're not progressing
@@ -41,7 +44,7 @@ class DrainBackOff : IDrainBackOff {
         } else if (result.hasRecoverable()) {
             val n = consecutiveNoProgress.incrementAndGet()
             val coolDownMs = Duration.ofMillis((n * COOLDOWN_STEP_MS).coerceAtMost(MAX_COOLDOWN_MS))
-            val until = Instant.now().plus(coolDownMs)
+            val until = clock.instant().plus(coolDownMs)
             cooldownUntil.set(until)
             logger.warn(
                 "{} consecutive drain cycles with no progress, backing off for {}s",
