@@ -1,5 +1,6 @@
 package com.hamza.kafka.order
 
+import com.hamza.kafka.commons.DeadLetterProjection
 import io.swagger.v3.oas.annotations.media.Schema
 import jakarta.validation.Valid
 import jakarta.validation.constraints.Min
@@ -76,4 +77,33 @@ data class OrderOutboxDto(
     val attempts: Int,
     @field:Schema(description = "last error message from failed publish attempt (null if no failure)")
     val lastError: String?,
+)
+
+data class DeadLetterDto(
+    val id: String,
+    val orderId: String,
+    val eventType: String,
+    val topic: String,
+    val payload: String,
+    val attempts: Int,
+    val lastError: String,
+    val createdAt: Instant,
+    val lastErrorAt: Instant,
+)
+
+fun DeadLetterProjection.toDto() =
+    DeadLetterDto(
+        id = this.id,
+        orderId = this.orderId,
+        eventType = this.eventType,
+        topic = this.topic,
+        payload = this.payload,
+        attempts = this.attempts,
+        lastError = this.lastError,
+        createdAt = this.createdAt,
+        lastErrorAt = this.lastErrorAt,
+    )
+
+data class DeadLettersDto(
+    val results: List<DeadLetterDto>,
 )

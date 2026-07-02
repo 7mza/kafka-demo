@@ -1,6 +1,5 @@
 package com.hamza.kafka.order
 
-import com.hamza.kafka.commons.DeadLetterProjection
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.Parameter
 import io.swagger.v3.oas.annotations.media.Content
@@ -27,10 +26,7 @@ interface API {
     @PostMapping
     @Operation(
         summary = "Create a single order",
-        description = """
-In same transaction, will create order entry + event/outbox entry in DB.<br/>
-Publishing poller will pick it in batches in next polls.
-""",
+        description = "Can force a dead letter outbox by using string `fail` in customerId",
     )
     @ApiResponses(
         value = [
@@ -128,7 +124,7 @@ Publishing poller will pick it in batches in next polls.
   "id": "0qtc1hmz3p6nk",
   "orderId": "0qsbs74grkjq2",
   "eventType": "order.placed",
-  "topic": "orders",
+  "topic": "orders.placed",
   "payload": "{\"items\": [{\"sku\": \"sku-01\", \"quantity\": 10, \"unitPriceCents\": 199}], \"eventId\": \"0qtc1hmz3p6nk\", \"orderId\": \"0qsbs74grkjq2\", \"eventType\": \"order.placed\", \"customerId\": \"user_2203\", \"occurredAt\": \"2026-06-26T14:54:47.544Z\", \"totalAmountCents\": 1990}",
   "publishedAt": "2026-06-26T14:54:57.536Z",
   "attempts": 0,
@@ -149,7 +145,7 @@ Publishing poller will pick it in batches in next polls.
     @GetMapping("/dl")
     @Operation(
         summary = "Get dead letter outbox messages",
-        description = "Outboxes exceeded max_attempts & are excluded from future publishing polls",
+        description = "Outbox messages that exceeded `max_attempts` & are excluded from any future publishing cycle",
     )
     @ApiResponses(
         value = [
@@ -159,11 +155,33 @@ Publishing poller will pick it in batches in next polls.
                 content = [
                     Content(
                         mediaType = MediaType.APPLICATION_JSON_VALUE,
-                        schema = Schema(implementation = DeadLetterProjection::class),
+                        schema = Schema(implementation = DeadLettersDto::class),
+                        examples = [
+                            ExampleObject(
+                                name = "example-0",
+                                value = """
+{
+  "results": [
+    {
+      "id": "0qtc1hmz3p6nk",
+      "orderId": "0qsbs74grkjq2",
+      "eventType": "order.placed",
+      "topic": "orders.placed",
+      "payload": "{\"items\": [{\"sku\": \"sku-01\", \"quantity\": 10, \"unitPriceCents\": 199}], \"eventId\": \"0qtc1hmz3p6nk\", \"orderId\": \"0qsbs74grkjq2\", \"eventType\": \"order.placed\", \"customerId\": \"fail_2203\", \"occurredAt\": \"2026-07-02T12:49:45.154Z\", \"totalAmountCents\": 1990}",
+      "attempts": 10,
+      "lastError": "IllegalStateException: forced failure for demo",
+      "createdAt": "2026-07-02T12:49:45.196850Z",
+      "lastErrorAt": "2026-07-02T12:49:45.346726Z"
+    }
+  ]
+}
+""",
+                            ),
+                        ],
                     ),
                 ],
             ),
         ],
     )
-    fun getDeadLetters(): List<DeadLetterProjection>
+    fun getDeadLetters(): DeadLettersDto
 }

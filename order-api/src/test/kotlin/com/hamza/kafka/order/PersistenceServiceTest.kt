@@ -1,6 +1,7 @@
 package com.hamza.kafka.order
 
 import com.hamza.kafka.commons.ResourceNotFoundException
+import com.hamza.kafka.commons.TSIDGenerator
 import com.hamza.kafka.commons.parseJson
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.within
@@ -15,7 +16,10 @@ import tools.jackson.databind.ObjectMapper
 import java.time.Instant
 import java.time.temporal.ChronoUnit
 
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)
+@SpringBootTest(
+    webEnvironment = SpringBootTest.WebEnvironment.NONE,
+    properties = ["spring.jpa.hibernate.ddl-auto=validate", "spring.liquibase.enabled=true"],
+)
 @Import(PgTestContainer::class)
 class PersistenceServiceTest {
     @Autowired
@@ -126,6 +130,37 @@ class PersistenceServiceTest {
     fun getOutboxByWrongOrderId() {
         assertThrows<ResourceNotFoundException> {
             service.getOutboxByOrderId("")
+        }
+    }
+
+    @Test
+    fun getDeadLetters() {
+        val orders =
+            listOf(
+                Outbox(
+                    id = TSIDGenerator.next(),
+                    orderId = TSIDGenerator.next(),
+                    eventType = "event1",
+                    topic = "topic",
+                    payload = "{}",
+                    publishedAt = Instant.now(),
+                ),
+                Outbox(
+                    id = TSIDGenerator.next(),
+                    orderId = TSIDGenerator.next(),
+                    eventType = "event2",
+                    topic = "topic",
+                    payload = "{}",
+                    attempts = 10,
+                    lastError = "toto",
+                ),
+            )
+
+        outboxRepo.saveAll(orders)
+
+        service.getDeadLetters().also {
+            assertThat(it).hasSize(1)
+            assertThat(it.first().id).isEqualTo(orders.last().id)
         }
     }
 }

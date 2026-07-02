@@ -1,5 +1,6 @@
 package com.hamza.kafka.order
 
+import com.hamza.kafka.commons.DeadLetterProjection
 import com.hamza.kafka.commons.ResourceNotFoundException
 import com.hamza.kafka.commons.writeJson
 import org.assertj.core.api.Assertions.assertThat
@@ -19,6 +20,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.springframework.test.web.servlet.client.RestTestClient
 import org.springframework.test.web.servlet.client.expectBody
 import tools.jackson.databind.ObjectMapper
+import java.time.Instant
 
 @WebMvcTest(controllers = [Controller::class])
 @AutoConfigureRestTestClient
@@ -259,5 +261,41 @@ class ControllerTest {
             .exchange()
             .expectStatus()
             .isNotFound
+    }
+
+    @Test
+    fun getDeadLetters() {
+        val dead =
+            listOf(
+                object : DeadLetterProjection {
+                    override val id = "0qtc1hmz3p6nk"
+                    override val orderId = "0qsbs74grkjq2"
+                    override val eventType = "order.placed"
+                    override val topic = "order.placed"
+                    override val payload = "payload"
+                    override val attempts = 10
+                    override val lastError = "lastError"
+                    override val createdAt = Instant.now()
+                    override val lastErrorAt = Instant.now()
+                },
+            )
+
+        whenever(service.getDeadLetters()).thenReturn(dead)
+
+        val response =
+            client
+                .get()
+                .uri("/api/order/dl")
+                .exchange()
+                .expectStatus()
+                .isOk
+                .expectHeader()
+                .contentType(MediaType.APPLICATION_JSON)
+                .expectBody<DeadLettersDto>()
+                .returnResult()
+
+        verify(service).getDeadLetters()
+        assertThat(response.responseBody).isNotNull
+        assertThat(response.responseBody!!.results).isEqualTo(dead.map { it.toDto() })
     }
 }

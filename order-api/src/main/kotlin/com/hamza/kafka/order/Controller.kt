@@ -1,6 +1,5 @@
 package com.hamza.kafka.order
 
-import com.hamza.kafka.commons.DeadLetterProjection
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.RestController
 import org.springframework.web.util.UriComponentsBuilder
@@ -22,5 +21,5 @@ class Controller(
 
     override fun getOutboxByOrderId(id: String) = service.getOutboxByOrderId(id).toDto()
 
-    override fun getDeadLetters(): List<DeadLetterProjection> = service.getDeadLetters()
+    override fun getDeadLetters() = service.getDeadLetters().map { it.toDto() }.let { DeadLettersDto(it) }
 }

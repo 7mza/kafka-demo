@@ -25,13 +25,13 @@ loop
     note right: commit read offset\nif it fails idempotency check will ignore it
 end
 
-group listener on `outbox_channel`
-    SERVICE <--> DB: listen/notify
+group listener on DB `outbox_channel`
     note across: same flow as ORDER_API
+    SERVICE <--> DB: listen/notify
 end
 
 group low freq rescue periodic poll
-      SERVICE --> DB
-      note across: same flow as ORDER_API
+    note across: rescue in case listener fails or back off kicks in
+    SERVICE --> SERVICE: trigger drain service
 end
 @enduml

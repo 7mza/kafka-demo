@@ -16,12 +16,13 @@ group transactional
 end
 API -> U : order
 
-group listener on `outbox_channel`
+group listener on DB `outbox_channel`
     API <--> DB: listen/notify
     note left: manual CDC
-    note right: trigger on insert that notify **`outbox_channel`**
+    note right: trigger on insert that notify **outbox_channel**
+    API --> API: trigger drain service
     loop until no unpublished outbox is retrieved
-        note across: **drain service** keep draining unpublished outboxes until none is left then sleeps
+        note across: **drain service**:\nkeep draining unpublished outboxes until none is left then sleeps\nis gated by a linear back off in case kafka is unhealthy
         API --> DB : get unpublished outbox batch
         note right: **publishedAt == null AND attempts < max_attempts**\nwill lock current batch in DB in case of concurrency\nany concurrent will pick next batch
         DB --> API : outbox batch
@@ -62,7 +63,7 @@ group listener on `outbox_channel`
 end
 
 group low freq rescue periodic poll
-    API --> DB
-    note across: wake up **drain service**\n(rescue in case listener fails)
+    note across: rescue in case listener fails or back off kicks in
+    API --> API: trigger drain service
 end
 @enduml
