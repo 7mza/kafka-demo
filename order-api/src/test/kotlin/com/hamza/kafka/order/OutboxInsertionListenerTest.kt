@@ -1,9 +1,9 @@
 package com.hamza.kafka.order
 
+import eu.rekawek.toxiproxy.Proxy
 import org.awaitility.Awaitility.await
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
-import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.never
 import org.mockito.kotlin.times
@@ -12,11 +12,8 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.context.annotation.Import
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean
-import org.testcontainers.DockerClientFactory
-import org.testcontainers.postgresql.PostgreSQLContainer
 import java.time.Duration
 
-@Disabled // FIXME: pausing is wrong, need to kill and create a new one for ex branch to exec
 @SpringBootTest(
     webEnvironment = SpringBootTest.WebEnvironment.NONE,
     properties = [
@@ -25,7 +22,7 @@ import java.time.Duration
         "spring.liquibase.enabled=true",
     ],
 )
-@Import(PausablePgTestContainer::class)
+@Import(ProxiedPgTestContainer::class)
 class OutboxInsertionListenerTest {
     @Autowired
     private lateinit var orderRepo: OrderRepository
@@ -40,9 +37,7 @@ class OutboxInsertionListenerTest {
     private lateinit var trigger: IDrainTrigger
 
     @Autowired
-    private lateinit var pPgContainer: PostgreSQLContainer
-
-    private val dockerClient = DockerClientFactory.instance().client()
+    private lateinit var proxy: Proxy
 
     private val request =
         OrderPostDto(
@@ -62,15 +57,15 @@ class OutboxInsertionListenerTest {
     }
 
     @Test
-    fun `trigger fires again after PG pause and resume`() {
+    fun `trigger fires again after PG is killed and resumed`() {
         persistenceService.save(request)
         await().atMost(Duration.ofSeconds(5)).untilAsserted {
             verify(trigger, times(1)).trigger()
         }
 
-        dockerClient.pauseContainerCmd(pPgContainer.containerId).exec()
-        Thread.sleep(Duration.ofSeconds(5).toMillis())
-        dockerClient.unpauseContainerCmd(pPgContainer.containerId).exec()
+        proxy.disable()
+        Thread.sleep(Duration.ofSeconds(6).toMillis())
+        proxy.enable()
 
         persistenceService.save(request)
         await().atMost(Duration.ofSeconds(15)).untilAsserted {

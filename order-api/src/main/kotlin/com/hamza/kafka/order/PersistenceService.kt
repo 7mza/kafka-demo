@@ -5,7 +5,6 @@ import com.hamza.kafka.commons.ResourceNotFoundException
 import jakarta.transaction.Transactional
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Service
-import tools.jackson.databind.ObjectMapper
 
 interface IPersistenceService {
     fun save(request: OrderPostDto): Order
@@ -22,14 +21,13 @@ class PersistenceService(
     private val orderRepo: OrderRepository,
     private val orderOutboxRepo: OutboxRepository,
     private val deadLetterRepo: DeadLetterRepository,
-    private val objectMapper: ObjectMapper,
     @Value($$"${custom.topic_name}") private val topicName: String,
 ) : IPersistenceService {
     @Transactional
     override fun save(request: OrderPostDto): Order {
         val order = orderRepo.save(request.toEntity())
         val event = order.toOrderPlacedEvent()
-        val outbox = event.toOutbox(objectMapper, topicName)
+        val outbox = event.toOutbox(topicName)
         orderOutboxRepo.save(outbox)
         return order
     }

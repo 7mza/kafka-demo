@@ -29,7 +29,7 @@ abstract class BaseOutbox(
     @field:NotBlank
     @field:Size(max = 100)
     var topic: String,
-    //
+    // FIXME: change to converter
     @field:Column(nullable = false, columnDefinition = "jsonb")
     @field:JdbcTypeCode(SqlTypes.JSON)
     @field:NotBlank

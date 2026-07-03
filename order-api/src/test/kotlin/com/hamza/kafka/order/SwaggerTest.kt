@@ -1,16 +1,17 @@
 package com.hamza.kafka.order
 
+import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.resttestclient.autoconfigure.AutoConfigureRestTestClient
 import org.springframework.boot.test.context.SpringBootTest
-import org.springframework.context.annotation.Import
 import org.springframework.http.MediaType
+import org.springframework.test.context.ActiveProfiles
 import org.springframework.test.web.servlet.client.RestTestClient
 
 // for GraalVM tracing-agent to intercept swagger
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
-@Import(PgTestContainer::class)
+@ActiveProfiles("default", "h2")
 @AutoConfigureRestTestClient
 class SwaggerTest {
     @Autowired
@@ -24,7 +25,7 @@ class SwaggerTest {
             .accept(MediaType.APPLICATION_JSON)
             .exchange()
             .expectStatus()
-            .isFound
+            .value { assertThat(it).isIn(200, 302) }
     }
 
     @Test

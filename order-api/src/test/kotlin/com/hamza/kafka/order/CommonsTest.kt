@@ -3,13 +3,11 @@ package com.hamza.kafka.order
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.boot.test.context.SpringBootTest
-import org.springframework.context.annotation.Import
+import org.springframework.boot.test.autoconfigure.json.JsonTest
 import tools.jackson.databind.ObjectMapper
 
 // for GraalVM tracing-agent to intercept commons
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)
-@Import(PgTestContainer::class)
+@JsonTest
 class CommonsTest {
     @Autowired
     private lateinit var objectMapper: ObjectMapper

@@ -1,6 +1,11 @@
 package com.hamza.kafka.order
 
-import com.hamza.kafka.commons.parseJson
+import com.hamza.kafka.avro.OrderPlacedEvent
+import com.hamza.kafka.commons.createEventItem
+import com.hamza.kafka.commons.createOrderPlacedEvent
+import io.confluent.kafka.serializers.AbstractKafkaSchemaSerDeConfig
+import io.confluent.kafka.serializers.KafkaAvroDeserializer
+import io.confluent.kafka.serializers.KafkaAvroDeserializerConfig
 import org.apache.kafka.clients.consumer.ConsumerConfig
 import org.apache.kafka.common.serialization.StringDeserializer
 import org.assertj.core.api.Assertions.assertThat
@@ -13,19 +18,17 @@ import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.context.annotation.Import
 import org.springframework.kafka.core.DefaultKafkaConsumerFactory
 import org.springframework.kafka.test.utils.KafkaTestUtils
+import org.springframework.test.context.ActiveProfiles
 import org.testcontainers.kafka.KafkaContainer
-import tools.jackson.databind.ObjectMapper
 import java.time.Duration
 import java.util.UUID
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)
-@Import(PgTestContainer::class, KafkaTestContainer::class)
+@ActiveProfiles("default", "h2")
+@Import(KafkaTestContainer::class)
 class PublishServiceTest {
     @Autowired
     private lateinit var service: IPublishService
-
-    @Autowired
-    private lateinit var objectMapper: ObjectMapper
 
     @Autowired
     private lateinit var kafkaContainer: KafkaContainer
@@ -33,16 +36,23 @@ class PublishServiceTest {
     @Value($$"${custom.topic_name}")
     private lateinit var topicName: String
 
+    @Value($$"${spring.kafka.producer.properties.schema.registry.url}")
+    private lateinit var schemaRegistryUrl: String
+
     private val consumer by lazy {
-        val props = KafkaTestUtils.consumerProps(kafkaContainer.bootstrapServers, "${UUID.randomUUID()}", true)
-        props[ConsumerConfig.AUTO_OFFSET_RESET_CONFIG] = "latest"
-        props[ConsumerConfig.METADATA_MAX_AGE_CONFIG] = "1000"
-        props[ConsumerConfig.REQUEST_TIMEOUT_MS_CONFIG] = "2000"
-        DefaultKafkaConsumerFactory<String, String>(
-            props,
-            StringDeserializer(),
-            StringDeserializer(),
-        ).createConsumer()
+        KafkaTestUtils
+            .consumerProps(kafkaContainer.bootstrapServers, UUID.randomUUID().toString(), true)
+            .apply {
+                put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "latest")
+                put(ConsumerConfig.METADATA_MAX_AGE_CONFIG, "1000")
+                put(ConsumerConfig.REQUEST_TIMEOUT_MS_CONFIG, "2000")
+                put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer::class.java)
+                put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, KafkaAvroDeserializer::class.java)
+                put(AbstractKafkaSchemaSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG, schemaRegistryUrl)
+                put(KafkaAvroDeserializerConfig.SPECIFIC_AVRO_READER_CONFIG, true)
+            }.let {
+                DefaultKafkaConsumerFactory<String, OrderPlacedEvent>(it).createConsumer()
+            }
     }
 
     @AfterEach
@@ -54,13 +64,12 @@ class PublishServiceTest {
     fun `publish should send order to kafka and mark related outbox as published`() {
         // gen event + outbox
         val event =
-            Event(
+            createOrderPlacedEvent(
                 orderId = "order_2203",
                 customerId = "user_2203",
-                items = listOf(Item(sku = "sku-01", quantity = 10, unitPriceCents = 199)),
-                totalAmountCents = 1990,
+                items = listOf(createEventItem(sku = "sku-01", quantity = 10, unitPriceCents = 199)),
             )
-        val outbox = event.toOutbox(objectMapper, topicName)
+        val outbox = event.toOutbox(topicName)
 
         // subscribe to kafka
         consumer.subscribe(listOf(topicName))
@@ -77,7 +86,7 @@ class PublishServiceTest {
         // check event was sent to kafka
         KafkaTestUtils.getSingleRecord(consumer, topicName, Duration.ofSeconds(30)).also {
             assertThat(it.key()).isEqualTo(outbox.orderId)
-            assertThat(parseJson<Event>(it.value(), objectMapper)).isEqualTo(event)
+            assertThat(it.value()).isEqualTo(event)
         }
     }
 }

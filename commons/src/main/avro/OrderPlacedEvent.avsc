@@ -1,0 +1,54 @@
+{
+  "type": "record",
+  "name": "OrderPlacedEvent",
+  "namespace": "com.hamza.kafka.avro",
+  "fields": [
+    {
+      "name": "eventId",
+      "type": "string"
+    },
+    {
+      "name": "occurredAt",
+      "type": {
+        "type": "long",
+        "logicalType": "timestamp-millis"
+      }
+    },
+    {
+      "name": "orderId",
+      "type": "string"
+    },
+    {
+      "name": "customerId",
+      "type": "string"
+    },
+    {
+      "name": "items",
+      "type": {
+        "type": "array",
+        "items": {
+          "type": "record",
+          "name": "Item",
+          "fields": [
+            {
+              "name": "sku",
+              "type": "string"
+            },
+            {
+              "name": "quantity",
+              "type": "int"
+            },
+            {
+              "name": "unitPriceCents",
+              "type": "int"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "totalAmountCents",
+      "type": "int"
+    }
+  ]
+}

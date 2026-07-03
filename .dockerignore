@@ -1,11 +1,13 @@
 **
+!Dockerfile
 !build.gradle.kts
 !commons/build.gradle.kts
 !commons/src
 !gradle.properties
 !gradle/
 !gradlew
-!order-api/Dockerfile
+!inventory-service/build.gradle.kts
+!inventory-service/src
 !order-api/build.gradle.kts
 !order-api/src
-!settings.gradle.kts
+!settings.gradle.docker

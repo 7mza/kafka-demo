@@ -1,6 +1,11 @@
 package com.hamza.kafka.order
 
-import com.hamza.kafka.commons.parseJson
+import com.hamza.kafka.avro.OrderPlacedEvent
+import com.hamza.kafka.commons.createEventItem
+import com.hamza.kafka.commons.createOrderPlacedEvent
+import io.confluent.kafka.serializers.AbstractKafkaSchemaSerDeConfig
+import io.confluent.kafka.serializers.KafkaAvroDeserializer
+import io.confluent.kafka.serializers.KafkaAvroDeserializerConfig
 import org.apache.kafka.clients.admin.AdminClient
 import org.apache.kafka.clients.consumer.ConsumerConfig
 import org.apache.kafka.common.TopicPartitionInfo
@@ -17,9 +22,8 @@ import org.springframework.context.annotation.Import
 import org.springframework.kafka.core.DefaultKafkaConsumerFactory
 import org.springframework.kafka.core.KafkaAdmin
 import org.springframework.kafka.test.utils.KafkaTestUtils
+import org.springframework.test.context.ActiveProfiles
 import org.testcontainers.DockerClientFactory
-import org.testcontainers.junit.jupiter.Testcontainers
-import tools.jackson.databind.ObjectMapper
 import java.time.Duration
 import java.util.UUID
 import java.util.concurrent.TimeUnit
@@ -30,7 +34,6 @@ fun AdminClient.describeTopicPartitions(topicName: String): List<TopicPartitionI
         .get(5, TimeUnit.SECONDS)
         .partitions()
 
-@Testcontainers
 @SpringBootTest(
     webEnvironment = SpringBootTest.WebEnvironment.NONE,
     properties = [
@@ -42,7 +45,8 @@ fun AdminClient.describeTopicPartitions(topicName: String): List<TopicPartitionI
         "spring.kafka.producer.properties.request.timeout.ms=5000",
     ],
 )
-@Import(PgTestContainer::class, KafkaReplicationTestContainers::class)
+@ActiveProfiles("default", "h2")
+@Import(KafkaReplicationTestContainers::class)
 class KafkaReplicationTest {
     @Autowired
     private lateinit var service: IPublishService
@@ -50,11 +54,11 @@ class KafkaReplicationTest {
     @Autowired
     private lateinit var kafkaAdmin: KafkaAdmin
 
-    @Autowired
-    private lateinit var objectMapper: ObjectMapper
-
     @Value($$"${custom.topic_name}")
     private lateinit var topicName: String
+
+    @Value($$"${spring.kafka.producer.properties.schema.registry.url}")
+    private lateinit var schemaRegistryUrl: String
 
     @Value($$"${spring.kafka.bootstrap-servers}")
     private lateinit var bootstrapServers: String
@@ -70,15 +74,19 @@ class KafkaReplicationTest {
     private val dockerClient = DockerClientFactory.instance().client()
 
     private val consumer by lazy {
-        val props = KafkaTestUtils.consumerProps(bootstrapServers, "${UUID.randomUUID()}", true)
-        props[ConsumerConfig.AUTO_OFFSET_RESET_CONFIG] = "latest"
-        props[ConsumerConfig.METADATA_MAX_AGE_CONFIG] = "1000"
-        props[ConsumerConfig.REQUEST_TIMEOUT_MS_CONFIG] = "5000"
-        DefaultKafkaConsumerFactory<String, String>(
-            props,
-            StringDeserializer(),
-            StringDeserializer(),
-        ).createConsumer()
+        KafkaTestUtils
+            .consumerProps(bootstrapServers, UUID.randomUUID().toString(), true)
+            .apply {
+                put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "latest")
+                put(ConsumerConfig.METADATA_MAX_AGE_CONFIG, "1000")
+                put(ConsumerConfig.REQUEST_TIMEOUT_MS_CONFIG, "5000")
+                put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer::class.java)
+                put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, KafkaAvroDeserializer::class.java)
+                put(AbstractKafkaSchemaSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG, schemaRegistryUrl)
+                put(KafkaAvroDeserializerConfig.SPECIFIC_AVRO_READER_CONFIG, true)
+            }.let {
+                DefaultKafkaConsumerFactory<String, OrderPlacedEvent>(it).createConsumer()
+            }
     }
 
     @BeforeEach
@@ -141,13 +149,12 @@ class KafkaReplicationTest {
         // publish should succeed
         // 2 surviving replicas are enough to satisfy acks=all with min.insync.replicas=2
         val event =
-            Event(
+            createOrderPlacedEvent(
                 orderId = "order_2203",
                 customerId = "user_2203",
-                items = listOf(Item(sku = "sku-01", quantity = 1, unitPriceCents = 100)),
-                totalAmountCents = 100,
+                items = listOf(createEventItem(sku = "sku-01", quantity = 1, unitPriceCents = 100)),
             )
-        val outbox = event.toOutbox(objectMapper, topicName)
+        val outbox = event.toOutbox(topicName)
 
         service.publish(listOf(outbox)).also {
             assertThat(it.publishedCount).isOne
@@ -155,7 +162,7 @@ class KafkaReplicationTest {
 
         // check event is retrievable
         KafkaTestUtils.getSingleRecord(consumer, topicName, Duration.ofSeconds(30)).also {
-            assertThat(parseJson<Event>(it.value(), objectMapper)).isEqualTo(event)
+            assertThat(it.value()).isEqualTo(event)
         }
 
         // resume paused and check ISR recovered

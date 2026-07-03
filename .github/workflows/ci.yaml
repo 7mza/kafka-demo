@@ -81,9 +81,11 @@ jobs:
         uses: docker/build-push-action@v7
         with:
           context: .
-          file: ${{ matrix.service }}/Dockerfile
+          file: Dockerfile
           push: false
           load: true
+          build-args: |
+            MODULE_NAME=${{ matrix.service }}
           tags: |
             docker.io/7mza/${{ matrix.service }}:${{ steps.version.outputs.version }}
             docker.io/7mza/${{ matrix.service }}:latest
@@ -102,10 +104,12 @@ jobs:
         uses: docker/build-push-action@v7
         with:
           context: .
-          file: ${{ matrix.service }}/Dockerfile
+          file: Dockerfile
           push: true
           sbom: true
           provenance: true
+          build-args: |
+            MODULE_NAME=${{ matrix.service }}
           tags: |
             docker.io/7mza/${{ matrix.service }}:${{ steps.version.outputs.version }}
             docker.io/7mza/${{ matrix.service }}:latest

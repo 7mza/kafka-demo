@@ -4,19 +4,32 @@
 
 event-driven pipeline demo
 
+- clustering / replication/ partitioning
+- Avro schema / registry
+- CDC
+- transactional outbox write
+- idempotent read
+- backoff / retry / rescue
+- dead lettering
+- GraalVM
+- mTLS
+
 ## env
 
 ![Kraft cluster](docs/kafka_comp_demo.svg)
 
-this env can be modified using [compose.yaml](compose.yaml) and [.env](.env)
+can be modified using [compose.yaml](compose.yaml) and [.env](.env)
 
 (in a real prod env it should be multiple isolation zones with N ctrls + M brokers in each zone)
 
 ## components
 
-### commons
-
-shared libs
+```yaml
+kafka-demo/
+├── commons/ # shared libs, Avro schemas/codegen
+├── order-api/ # producer
+├── inventory-service/ # consumer
+```
 
 ### order-api
 
@@ -26,19 +39,17 @@ shared libs
 
 ![inventory service sequence UML](docs/inventory_service_seq.svg)
 
-### audit-service
-
-TODO
-
 ## run
 
 ```shell
 docker compose up --build
 ```
 
-[API](http://localhost:8080/swagger-ui)
+[order-api](http://localhost:8080/swagger-ui)
 
-[Kafbat UI](http://localhost:8081)
+[inventory-service](http://localhost:8081/swagger-ui)
+
+[Kafbat UI](http://localhost:9090)
 
 ## build
 

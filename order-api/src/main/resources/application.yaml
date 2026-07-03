@@ -58,9 +58,6 @@ spring:
     password: ${POSTGRES_PASSWORD}
     url: jdbc:postgresql://${custom.pg.host:localhost}:5432/${POSTGRES_DB}
     username: ${POSTGRES_USER}
-  devtools:
-    restart:
-      enabled: false
   docker:
     compose:
       enabled: true
@@ -70,6 +67,7 @@ spring:
           - kafka
           - kafka-ui
           - postgres
+          - schema-registry
       start:
         arguments:
           - --remove-orphans
@@ -124,12 +122,11 @@ spring:
       properties:
         enable:
           idempotence: false
-          spring:
-            json:
-              trusted:
-                packages: 'com.hamza.*'
+        schema:
+          registry:
+            url: http://${custom.registry.host:localhost}:9091
       retries: 0
-      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      value-serializer: io.confluent.kafka.serializers.KafkaAvroSerializer
   liquibase:
     analytics-enabled: false
     default-schema: ${spring.application.name}
@@ -173,6 +170,8 @@ custom:
   poll_delay: ${ORDERS_POLL_DELAY}
   poll_initial_delay: ${ORDERS_POLL_INITIAL_DELAY}
   publish_timeout: ${ORDERS_PUBLISH_TIMEOUT}
+  registry:
+    host: schema-registry
   replication_factor: ${ORDERS_REPLICATION_FACTOR}
   topic_name: ${ORDERS_TOPIC_NAME}
 logging:
@@ -184,8 +183,6 @@ spring:
   config:
     activate:
       on-profile: container
-  devtools:
-    add-properties: false
   docker:
     compose:
       enabled: false

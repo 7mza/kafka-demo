@@ -1,6 +1,9 @@
 package com.hamza.kafka.order
 
-import com.hamza.kafka.commons.parseJson
+import com.hamza.kafka.avro.OrderPlacedEvent
+import io.confluent.kafka.serializers.AbstractKafkaSchemaSerDeConfig
+import io.confluent.kafka.serializers.KafkaAvroDeserializer
+import io.confluent.kafka.serializers.KafkaAvroDeserializerConfig
 import org.apache.kafka.clients.consumer.ConsumerConfig
 import org.apache.kafka.common.serialization.StringDeserializer
 import org.assertj.core.api.Assertions.assertThat
@@ -18,7 +21,6 @@ import org.springframework.kafka.test.utils.KafkaTestUtils
 import org.springframework.test.web.servlet.client.RestTestClient
 import org.springframework.test.web.servlet.client.expectBody
 import org.testcontainers.kafka.KafkaContainer
-import tools.jackson.databind.ObjectMapper
 import java.time.Duration
 import java.util.UUID
 
@@ -39,24 +41,28 @@ class PublishE2ETest {
     private lateinit var outboxRepo: OutboxRepository
 
     @Autowired
-    private lateinit var objectMapper: ObjectMapper
-
-    @Autowired
     private lateinit var kafkaContainer: KafkaContainer
 
     @Value($$"${custom.topic_name}")
     private lateinit var topicName: String
 
+    @Value($$"${spring.kafka.producer.properties.schema.registry.url}")
+    private lateinit var schemaRegistryUrl: String
+
     private val consumer by lazy {
-        val props = KafkaTestUtils.consumerProps(kafkaContainer.bootstrapServers, "${UUID.randomUUID()}", true)
-        props[ConsumerConfig.AUTO_OFFSET_RESET_CONFIG] = "latest"
-        props[ConsumerConfig.METADATA_MAX_AGE_CONFIG] = "1000"
-        props[ConsumerConfig.REQUEST_TIMEOUT_MS_CONFIG] = "2000"
-        DefaultKafkaConsumerFactory<String, String>(
-            props,
-            StringDeserializer(),
-            StringDeserializer(),
-        ).createConsumer()
+        KafkaTestUtils
+            .consumerProps(kafkaContainer.bootstrapServers, UUID.randomUUID().toString(), true)
+            .apply {
+                put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "latest")
+                put(ConsumerConfig.METADATA_MAX_AGE_CONFIG, "1000")
+                put(ConsumerConfig.REQUEST_TIMEOUT_MS_CONFIG, "2000")
+                put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer::class.java)
+                put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, KafkaAvroDeserializer::class.java)
+                put(AbstractKafkaSchemaSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG, schemaRegistryUrl)
+                put(KafkaAvroDeserializerConfig.SPECIFIC_AVRO_READER_CONFIG, true)
+            }.let {
+                DefaultKafkaConsumerFactory<String, OrderPlacedEvent>(it).createConsumer()
+            }
     }
 
     @AfterEach
@@ -119,7 +125,7 @@ class PublishE2ETest {
 
         // check events published to kafka
         val records = KafkaTestUtils.getRecords(consumer, Duration.ofSeconds(30))
-        val publishedEvents = records.records(topicName).map { parseJson<Event>(it.value(), objectMapper) }
+        val publishedEvents = records.records(topicName).map { it.value() }
         val expectedEvents = orderRepo.findAll().map { it.toOrderPlacedEvent() }
         assertThat(publishedEvents)
             .usingRecursiveFieldByFieldElementComparator(

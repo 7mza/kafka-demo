@@ -7,10 +7,9 @@ plugins {
     id("org.graalvm.buildtools.native")
 }
 
-group = "com.hamza.kafka.order"
+group = "com.hamza.kafka.inventory"
 version = "0.0.1"
 
-val avroSerializerVersion = "8.3.0"
 val logbookSpringVersion = "4.0.4"
 val openapiVersion = "3.0.3"
 val preLiquibaseVersion = "2.0.0"
@@ -18,11 +17,9 @@ val preLiquibaseVersion = "2.0.0"
 dependencies {
     developmentOnly("org.springframework.boot:spring-boot-docker-compose")
 
-    implementation("io.confluent:kafka-avro-serializer:$avroSerializerVersion")
     implementation("net.lbruun.springboot:preliquibase-spring-boot-starter:$preLiquibaseVersion")
     implementation("org.ehcache:ehcache::jakarta")
     implementation("org.hibernate.orm:hibernate-jcache")
-    implementation("org.postgresql:postgresql")
     implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:$openapiVersion")
     implementation("org.springframework.boot:spring-boot-starter-actuator")
     implementation("org.springframework.boot:spring-boot-starter-data-jpa")
@@ -34,6 +31,8 @@ dependencies {
     implementation("org.zalando:logbook-spring-boot-starter:$logbookSpringVersion")
     implementation(project(":commons"))
 
+    implementation("org.postgresql:postgresql")
+
     testImplementation("org.springframework.boot:spring-boot-starter-data-jpa-test")
     testImplementation("org.springframework.boot:spring-boot-starter-kafka-test")
     testImplementation("org.springframework.boot:spring-boot-starter-webmvc-test")
@@ -41,9 +40,6 @@ dependencies {
     testImplementation("org.testcontainers:testcontainers-junit-jupiter")
     testImplementation("org.testcontainers:testcontainers-kafka")
     testImplementation("org.testcontainers:testcontainers-postgresql")
-    testImplementation("org.testcontainers:testcontainers-toxiproxy")
-
-    testRuntimeOnly("com.h2database:h2")
 }
 
 val dockerRegistry = property("dockerRegistry") as String
@@ -72,6 +68,7 @@ tasks {
     withType<ProcessTestAot>().configureEach { jvmArgs("-XX:+EnableDynamicAgentLoading") }
 
     register<Exec>("buildImage") {
+        enabled = false // FIXME: enable when ready
         description = "build image using buildx"
         group = "publishing"
         workingDir(rootDir)

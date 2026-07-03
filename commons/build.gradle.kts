@@ -1,10 +1,15 @@
+plugins { id("com.github.davidmc24.gradle.plugin.avro") }
+
 group = "com.hamza.kafka.commons"
 version = "0.0.1"
 
+val avroVersion = "1.12.1"
 val hypersistenceTsidVersion = "2.1.4"
 
 // any project that depends on BaseEntity/TSIDGenerator must pull data-jpa & validation as impl
 dependencies {
+    api("org.apache.avro:avro:$avroVersion")
+
     compileOnly("org.springframework.boot:spring-boot-autoconfigure")
     compileOnly("org.springframework.boot:spring-boot-jackson")
     compileOnly("org.springframework.boot:spring-boot-starter-data-jpa")
@@ -20,4 +25,7 @@ dependencies {
 tasks {
     bootJar { enabled = false }
     bootRun { enabled = false }
+
+    compileKotlin { dependsOn(generateAvroJava) }
+    compileTestKotlin { dependsOn(generateTestAvroJava) }
 }

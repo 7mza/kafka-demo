@@ -1,5 +1,11 @@
 package com.hamza.kafka.order
 
+import com.hamza.kafka.avro.OrderPlacedEvent
+import com.hamza.kafka.commons.createEventItem
+import com.hamza.kafka.commons.createOrderPlacedEvent
+import io.confluent.kafka.serializers.AbstractKafkaSchemaSerDeConfig
+import io.confluent.kafka.serializers.KafkaAvroDeserializer
+import io.confluent.kafka.serializers.KafkaAvroDeserializerConfig
 import org.apache.kafka.clients.consumer.ConsumerConfig
 import org.apache.kafka.common.serialization.StringDeserializer
 import org.assertj.core.api.Assertions.assertThat
@@ -12,8 +18,8 @@ import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.context.annotation.Import
 import org.springframework.kafka.core.DefaultKafkaConsumerFactory
 import org.springframework.kafka.test.utils.KafkaTestUtils
+import org.springframework.test.context.ActiveProfiles
 import org.testcontainers.kafka.KafkaContainer
-import tools.jackson.databind.ObjectMapper
 import java.time.Duration
 import java.util.UUID
 
@@ -21,13 +27,11 @@ import java.util.UUID
     webEnvironment = SpringBootTest.WebEnvironment.NONE,
     properties = ["custom.partitions=3"],
 )
-@Import(PgTestContainer::class, KafkaTestContainer::class)
+@ActiveProfiles("default", "h2")
+@Import(KafkaTestContainer::class)
 class KafkaPartitionTest {
     @Autowired
     private lateinit var service: IPublishService
-
-    @Autowired
-    private lateinit var objectMapper: ObjectMapper
 
     @Autowired
     private lateinit var kafkaContainer: KafkaContainer
@@ -35,16 +39,23 @@ class KafkaPartitionTest {
     @Value($$"${custom.topic_name}")
     private lateinit var topicName: String
 
+    @Value($$"${spring.kafka.producer.properties.schema.registry.url}")
+    private lateinit var schemaRegistryUrl: String
+
     private val consumer by lazy {
-        val props = KafkaTestUtils.consumerProps(kafkaContainer.bootstrapServers, "${UUID.randomUUID()}", true)
-        props[ConsumerConfig.AUTO_OFFSET_RESET_CONFIG] = "latest"
-        props[ConsumerConfig.METADATA_MAX_AGE_CONFIG] = "1000"
-        props[ConsumerConfig.REQUEST_TIMEOUT_MS_CONFIG] = "2000"
-        DefaultKafkaConsumerFactory<String, String>(
-            props,
-            StringDeserializer(),
-            StringDeserializer(),
-        ).createConsumer()
+        KafkaTestUtils
+            .consumerProps(kafkaContainer.bootstrapServers, UUID.randomUUID().toString(), true)
+            .apply {
+                put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "latest")
+                put(ConsumerConfig.METADATA_MAX_AGE_CONFIG, "1000")
+                put(ConsumerConfig.REQUEST_TIMEOUT_MS_CONFIG, "2000")
+                put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer::class.java)
+                put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, KafkaAvroDeserializer::class.java)
+                put(AbstractKafkaSchemaSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG, schemaRegistryUrl)
+                put(KafkaAvroDeserializerConfig.SPECIFIC_AVRO_READER_CONFIG, true)
+            }.let {
+                DefaultKafkaConsumerFactory<String, OrderPlacedEvent>(it).createConsumer()
+            }
     }
 
     @AfterEach
@@ -58,12 +69,11 @@ class KafkaPartitionTest {
         val orderId = "order_2203"
         val outboxes =
             (1..15).map {
-                Event(
+                createOrderPlacedEvent(
                     orderId = orderId,
                     customerId = "user_220$it",
-                    items = listOf(Item(sku = "sku-0$it", quantity = 1 * it, unitPriceCents = 10 * it)),
-                    totalAmountCents = 1 * it * 10 * it,
-                ).toOutbox(objectMapper, topicName)
+                    items = listOf(createEventItem(sku = "sku-0$it", quantity = 1 * it, unitPriceCents = 10 * it)),
+                ).toOutbox(topicName)
             }
 
         // subscribe to kafka
@@ -87,12 +97,11 @@ class KafkaPartitionTest {
         // gen many events with different orderId
         val outboxes =
             (1..15).map {
-                Event(
+                createOrderPlacedEvent(
                     orderId = "order_20$it",
                     customerId = "user_220$it",
-                    items = listOf(Item(sku = "sku-0$it", quantity = 1 * it, unitPriceCents = 10 * it)),
-                    totalAmountCents = 1 * it * 10 * it,
-                ).toOutbox(objectMapper, topicName)
+                    items = listOf(createEventItem(sku = "sku-0$it", quantity = 1 * it, unitPriceCents = 10 * it)),
+                ).toOutbox(topicName)
             }
 
         // subscribe to kafka

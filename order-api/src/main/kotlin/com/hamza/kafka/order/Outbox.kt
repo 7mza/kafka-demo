@@ -1,6 +1,8 @@
 package com.hamza.kafka.order
 
+import com.hamza.kafka.avro.OrderPlacedEvent
 import com.hamza.kafka.commons.BaseOutbox
+import com.hamza.kafka.commons.toJson
 import jakarta.persistence.Cacheable
 import jakarta.persistence.Entity
 import jakarta.persistence.Table
@@ -9,6 +11,15 @@ import org.hibernate.annotations.CacheConcurrencyStrategy
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.data.jpa.repository.Query
 import java.time.Instant
+
+fun OrderPlacedEvent.toOutbox(topicName: String) =
+    Outbox(
+        id = this.eventId,
+        orderId = this.orderId,
+        eventType = this.schema.name,
+        topic = topicName,
+        payload = this.toJson(),
+    )
 
 @Entity
 @Table(name = "orders_outbox")

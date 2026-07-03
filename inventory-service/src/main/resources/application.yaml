@@ -1,15 +1,3 @@
-# test YAML should mirror main YAML as much as possible for GraalVM tracing agent to intercept everything
-# general exceptions to this rule are testcontainers service connections
-custom:
-  batch_size: 10
-  max_attempts: 10
-  min_insync_replicas: 1
-  partitions: 1
-  poll_delay: PT24H
-  poll_initial_delay: PT24H
-  publish_timeout: PT5S
-  replication_factor: 1
-  topic_name: orders.placed
 logbook:
   format:
     style: http
@@ -21,8 +9,8 @@ logbook:
 logging:
   include-application-name: false
   level:
-    com.hamza: debug
-    org.apache.kafka: error
+    com.hamza: info
+    org.apache.kafka: warn
     org.hibernate:
       SQL: debug
       stat: debug
@@ -37,19 +25,17 @@ management:
       enabled: true
     readinessstate:
       enabled: true
-preliquibase:
-  enabled: false
 server:
   compression:
     additional-mime-types: application/x-ndjson,text/event-stream
     enabled: true
   forward-headers-strategy: native
-  port: 0
+  port: 8081
   ssl:
     enabled: false
 spring:
   application:
-    name: order-api
+    name: inventory-service
   config:
     activate:
       on-profile: default
@@ -57,11 +43,28 @@ spring:
       - optional:file:.env[.properties]
   datasource:
     driverClassName: org.postgresql.Driver
+    hikari:
+      connection-init-sql: set search_path to "${spring.application.name}"
+    password: ${POSTGRES_PASSWORD}
+    url: jdbc:postgresql://${custom.pg.host:localhost}:5432/${POSTGRES_DB}
+    username: ${POSTGRES_USER}
+  docker:
+    compose:
+      enabled: true
+      file: compose.dev.yaml
+      profiles:
+        active:
+          - kafka
+          - kafka-ui
+          - postgres
+      start:
+        arguments:
+          - --remove-orphans
   jackson:
     default-property-inclusion: non_null
   jpa:
     hibernate:
-      ddl-auto: create-drop
+      ddl-auto: validate
     open-in-view: false
     properties:
       hibernate:
@@ -72,6 +75,7 @@ spring:
           use_query_cache: true
           use_second_level_cache: true
         default_batch_fetch_size: 32
+        default_schema: ${spring.application.name}
         enable_lazy_load_no_trans: false
         format_sql: false
         generate_statistics: true
@@ -100,30 +104,33 @@ spring:
         type:
           json_format_mapper: jackson3
   kafka:
-    admin:
-      modify-topic-configs: true
-    producer:
-      acks: all
-      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+    bootstrap-servers: localhost:9092
+    consumer:
+      auto-offset-reset: earliest
+      enable-auto-commit: false
+      group-id: ${spring.application.name}
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
       properties:
-        enable:
-          idempotence: false
-        metadata:
-          max:
-            age:
-              ms: 1000
-        request:
-          timeout:
-            ms: 2000
         schema:
           registry:
-            url: http://localhost:9091
-      retries: 0
-      value-serializer: io.confluent.kafka.serializers.KafkaAvroSerializer
+            url: http://${custom.registry.host:localhost}:9091
+        specific:
+          avro:
+            reader: true
+        spring:
+          deserializer:
+            value:
+              delegate:
+                class: io.confluent.kafka.serializers.KafkaAvroDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.ErrorHandlingDeserializer
+    listener:
+      ack-mode: manual
+      concurrency: 1
   liquibase:
     analytics-enabled: false
+    default-schema: ${spring.application.name}
     drop-first: true
-    enabled: false
+    enabled: true
   main:
     banner-mode: off
   output:
@@ -139,7 +146,7 @@ spring:
     error:
       include-exception: true
       include-message: always
-      include-stacktrace: always
+      include-stacktrace: never
 springdoc:
   api-docs:
     path: /api-docs
@@ -152,9 +159,26 @@ springdoc:
     path: /swagger-ui
     tagsSorter: alpha
 ---
+custom:
+  pg:
+    host: postgres
+  registry:
+    host: schema-registry
+logging:
+  level:
+    org.apache.kafka: ${KAFKA_LOGGING_LEVEL:warn}
+server:
+  port: 80
 spring:
-  datasource:
-    driverClassName: org.h2.Driver
   config:
     activate:
-      on-profile: h2
+      on-profile: container
+  docker:
+    compose:
+      enabled: false
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS}
+    listener:
+      concurrency: ${ORDERS_PARTITIONS}
+  liquibase:
+    drop-first: false

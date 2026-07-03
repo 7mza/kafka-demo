@@ -1,5 +1,7 @@
 package com.hamza.kafka.order
 
+import com.hamza.kafka.commons.createEventItem
+import com.hamza.kafka.commons.createOrderPlacedEvent
 import org.apache.kafka.clients.admin.AdminClient
 import org.assertj.core.api.Assertions.assertThat
 import org.awaitility.Awaitility.await
@@ -11,12 +13,10 @@ import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.context.annotation.Import
 import org.springframework.kafka.core.KafkaAdmin
+import org.springframework.test.context.ActiveProfiles
 import org.testcontainers.DockerClientFactory
-import org.testcontainers.junit.jupiter.Testcontainers
-import tools.jackson.databind.ObjectMapper
 import java.time.Duration
 
-@Testcontainers
 @SpringBootTest(
     webEnvironment = SpringBootTest.WebEnvironment.NONE,
     properties = [
@@ -25,16 +25,14 @@ import java.time.Duration
         "custom.replication_factor=3",
     ],
 )
-@Import(PgTestContainer::class, KafkaReplicationTestContainers::class)
+@ActiveProfiles("default", "h2")
+@Import(KafkaReplicationTestContainers::class)
 class KafkaMinInSyncReplicasTest {
     @Autowired
     private lateinit var service: IPublishService
 
     @Autowired
     private lateinit var kafkaAdmin: KafkaAdmin
-
-    @Autowired
-    private lateinit var objectMapper: ObjectMapper
 
     @Value($$"${custom.topic_name}")
     private lateinit var topicName: String
@@ -77,12 +75,11 @@ class KafkaMinInSyncReplicasTest {
         }
 
         val outbox =
-            Event(
+            createOrderPlacedEvent(
                 orderId = "order_2203",
                 customerId = "user_2203",
-                items = listOf(Item(sku = "sku-01", quantity = 1, unitPriceCents = 100)),
-                totalAmountCents = 100,
-            ).toOutbox(objectMapper, topicName)
+                items = listOf(createEventItem(sku = "sku-01", quantity = 1, unitPriceCents = 100)),
+            ).toOutbox(topicName)
 
         // broker reject with NotEnoughReplicasException (transient failure)
         // publish should return empty (nothing succeeded) and attempts must not be inc

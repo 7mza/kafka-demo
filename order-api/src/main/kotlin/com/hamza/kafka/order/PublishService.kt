@@ -1,7 +1,8 @@
 package com.hamza.kafka.order
 
+import com.hamza.kafka.avro.OrderPlacedEvent
 import com.hamza.kafka.commons.KafkaPublishResult
-import com.hamza.kafka.commons.parseJson
+import com.hamza.kafka.commons.fromJson
 import jakarta.transaction.Transactional
 import org.apache.commons.lang3.exception.ExceptionUtils
 import org.apache.kafka.common.errors.RetriableException
@@ -10,7 +11,6 @@ import org.springframework.beans.factory.annotation.Value
 import org.springframework.kafka.core.KafkaTemplate
 import org.springframework.kafka.support.SendResult
 import org.springframework.stereotype.Service
-import tools.jackson.databind.ObjectMapper
 import java.time.Duration
 import java.time.Instant
 import java.time.temporal.ChronoUnit
@@ -24,8 +24,7 @@ interface IPublishService {
 
 @Service
 class PublishService(
-    private val kafkaTemplate: KafkaTemplate<String, Event>,
-    private val objectMapper: ObjectMapper,
+    private val kafkaTemplate: KafkaTemplate<String, OrderPlacedEvent>,
     @Value($$"${custom.publish_timeout}") private val publishTimeout: Duration,
     @Value($$"${custom.max_attempts}") private val maxAttempts: Int,
 ) : IPublishService {
@@ -39,10 +38,10 @@ class PublishService(
             val pending =
                 orders.map {
                     it to
-                        executor.submit<SendResult<String, Event>> {
+                        executor.submit<SendResult<String, OrderPlacedEvent>> {
                             // exception here will only fail this task future, other tasks are not affected
                             // exception sits on this future until .get() below is called
-                            val event = parseJson<Event>(it.payload, objectMapper)
+                            val event = fromJson<OrderPlacedEvent>(it.payload)
                             // for demo: force permanent ex so this outbox dead letters after max_attempts
                             check(!event.customerId.contains("fail")) { "forced failure for demo" }
                             kafkaTemplate

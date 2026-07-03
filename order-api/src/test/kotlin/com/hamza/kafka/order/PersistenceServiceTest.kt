@@ -1,8 +1,9 @@
 package com.hamza.kafka.order
 
+import com.hamza.kafka.avro.OrderPlacedEvent
 import com.hamza.kafka.commons.ResourceNotFoundException
 import com.hamza.kafka.commons.TSIDGenerator
-import com.hamza.kafka.commons.parseJson
+import com.hamza.kafka.commons.fromJson
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.within
 import org.junit.jupiter.api.AfterEach
@@ -12,7 +13,6 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.context.annotation.Import
-import tools.jackson.databind.ObjectMapper
 import java.time.Instant
 import java.time.temporal.ChronoUnit
 
@@ -30,9 +30,6 @@ class PersistenceServiceTest {
 
     @Autowired
     private lateinit var outboxRepo: OutboxRepository
-
-    @Autowired
-    private lateinit var objectMapper: ObjectMapper
 
     @Value($$"${custom.topic_name}")
     private lateinit var topicName: String
@@ -72,11 +69,13 @@ class PersistenceServiceTest {
                 }
             }
 
+        val type = order.toOrderPlacedEvent().schema.name
+
         outboxRepo.findByOrderId(order.id).also {
             assertThat(it).isNotNull
             assertThat(it!!.id).hasSize(13)
             assertThat(it.orderId).isEqualTo(order.id)
-            assertThat(it.eventType).isEqualTo("order.placed")
+            assertThat(it.eventType).isEqualTo(type)
             assertThat(it.topic).isEqualTo(topicName)
             assertThat(it.publishedAt).isNull()
             assertThat(it.attempts).isZero
@@ -84,10 +83,10 @@ class PersistenceServiceTest {
             assertThat(it.updatedAt).isCloseTo(now, offset)
             assertThat(it.version).isZero
 
-            parseJson<Event>(it.payload, objectMapper).also { event ->
+            fromJson<OrderPlacedEvent>(it.payload).also { event ->
                 assertThat(event.eventId).hasSize(13)
-                assertThat(event.eventType).isEqualTo("order.placed")
-                assertThat(event.occurredAt).isNotBlank
+                assertThat(event.schema.name).isEqualTo(type)
+                assertThat(event.occurredAt).isCloseTo(now, offset)
                 assertThat(event.orderId).isEqualTo(order.id)
                 assertThat(event.customerId).isEqualTo(order.customerId)
                 assertThat(event.items).hasSize(1)

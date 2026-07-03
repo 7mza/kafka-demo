@@ -8,6 +8,7 @@ services:
           memory: 1g
     environment: &kafkaEnv
       KAFKA_ADVERTISED_LISTENERS: PLAINTEXT_HOST://localhost:9092,PLAINTEXT://kafka1:19092
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: false
       KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
       KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka1:9093,2@kafka2:9093,3@kafka3:9093
       KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
@@ -82,7 +83,7 @@ services:
           'wget -qO- localhost:8080/actuator/health | grep -q "{\"status\":\"UP\"}" || exit 1',
         ]
     ports:
-      - '8081:8080'
+      - '9090:8080'
     restart: unless-stopped
 
   postgres:
@@ -111,6 +112,8 @@ services:
       <<: *depends
       postgres:
         condition: service_healthy
+      schema-registry:
+        condition: service_healthy
     deploy: *deploy
     environment:
       KAFKA_BOOTSTRAP_SERVERS: ${KAFKA_BOOTSTRAP_SERVERS}
@@ -129,4 +132,22 @@ services:
       POSTGRES_USER: ${POSTGRES_USER}
     ports:
       - '8080:80'
+    restart: unless-stopped
+
+  schema-registry:
+    image: confluentinc/cp-schema-registry:latest
+    container_name: schema-registry
+    depends_on:
+      <<: *depends
+    deploy: *deploy
+    environment:
+      SCHEMA_REGISTRY_HOST_NAME: schema-registry
+      SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: PLAINTEXT://kafka1:19092,kafka2:19092,kafka3:19092
+      SCHEMA_REGISTRY_LISTENERS: http://0.0.0.0:9091
+      SCHEMA_REGISTRY_LOG4J_ROOT_LOGLEVEL: WARN
+    healthcheck:
+      <<: *healthcheck
+      test: ['CMD-SHELL', 'echo > /dev/tcp/localhost/9091']
+    ports:
+      - '9091:9091'
     restart: unless-stopped

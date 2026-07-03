@@ -1,11 +1,11 @@
 services:
-  kafka:
+  kafka1:
     extends:
       file: compose.yaml
       service: kafka1
     environment:
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT_HOST://localhost:9092,PLAINTEXT://kafka:19092
-      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT_HOST://localhost:9092,PLAINTEXT://kafka1:19092
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka1:9093
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
     profiles:
       - kafka
@@ -13,22 +13,52 @@ services:
   kafka-ui:
     image: kafbat/kafka-ui:latest
     container_name: kafka-ui
-    depends_on:
-      kafka:
+    depends_on: &depends
+      kafka1:
         condition: service_healthy
-    deploy:
+    deploy: &deploy
       resources:
         limits:
           memory: 1g
     environment:
-      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:19092
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka1:19092
       KAFKA_CLUSTERS_0_NAME: local
-      LOGGING_LEVEL_IO_KAFBAT_UI: WARN
-      LOGGING_LEVEL_ROOT: WARN
+      LOGGING_LEVEL_IO_KAFBAT_UI: ERROR
+      LOGGING_LEVEL_ROOT: ERROR
+    healthcheck: &healthcheck
+      test:
+        [
+          'CMD-SHELL',
+          'wget -qO- localhost:8080/actuator/health | grep -q "{\"status\":\"UP\"}" || exit 1',
+        ]
+      interval: 30s
+      retries: 3
+      start_period: 30s
+      timeout: 10s
     ports:
-      - '8081:8080'
+      - '9090:8080'
     profiles:
       - kafka-ui
+    restart: unless-stopped
+
+  schema-registry:
+    image: confluentinc/cp-schema-registry:latest
+    container_name: schema-registry
+    depends_on:
+      <<: *depends
+    deploy: *deploy
+    environment:
+      SCHEMA_REGISTRY_HOST_NAME: schema-registry
+      SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: PLAINTEXT://kafka1:19092
+      SCHEMA_REGISTRY_LISTENERS: http://0.0.0.0:9091
+      SCHEMA_REGISTRY_LOG4J_ROOT_LOGLEVEL: WARN
+    healthcheck:
+      <<: *healthcheck
+      test: ['CMD-SHELL', 'echo > /dev/tcp/localhost/9091']
+    ports:
+      - '9091:9091'
+    profiles:
+      - schema-registry
     restart: unless-stopped
 
   postgres:

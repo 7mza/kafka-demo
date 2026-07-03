@@ -14,6 +14,7 @@ plugins {
     id("com.autonomousapps.dependency-analysis") version "3.16.0"
     id("com.bmuschko.docker-remote-api") version "10.0.0" apply false
     id("com.github.ben-manes.versions") version "0.54.0"
+    id("com.github.davidmc24.gradle.plugin.avro") version "1.9.1" apply false
     id("com.github.node-gradle.node") version "7.1.0"
     id("org.graalvm.buildtools.native") version "1.1.3" apply false
     id("org.hibernate.orm") version "7.4.1.Final"
@@ -33,7 +34,10 @@ allprojects {
     plugins.apply("org.owasp.dependencycheck")
     plugins.apply("jacoco")
 
-    repositories { mavenCentral() }
+    repositories {
+        mavenCentral()
+        maven { url = uri("https://packages.confluent.io/maven/") }
+    }
 
     java { toolchain { languageVersion = JavaLanguageVersion.of(25) } }
 
@@ -85,7 +89,7 @@ subprojects {
             useJUnitPlatform()
             jvmArgumentProviders += CommandLineArgumentProvider { listOf("-javaagent:${mockitoAgent.asPath}") }
             maxParallelForks = (Runtime.getRuntime().availableProcessors() / 2).coerceAtLeast(1)
-            forkEvery = 10
+            forkEvery = 0
             jvmArgs("-XX:+EnableDynamicAgentLoading")
             reports {
                 html.required = false
@@ -138,10 +142,7 @@ subprojects {
     node { download = false }
 }
 
-dependencies {
-    jacocoAggregation(project(":commons"))
-    jacocoAggregation(project(":order-api"))
-}
+dependencies { subprojects.forEach { jacocoAggregation(project(it.path)) } }
 
 dependencyManagement { imports { mavenBom(SpringBootPlugin.BOM_COORDINATES) } }
 

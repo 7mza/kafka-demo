@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<config xmlns='http://www.ehcache.org/v3'>
+  <cache-template name="short">
+    <expiry>
+      <ttl unit="minutes">10</ttl>
+    </expiry>
+    <resources>
+      <heap>1000</heap>
+    </resources>
+  </cache-template>
+  <cache
+    alias="orders"
+    uses-template="short" />
+  <cache
+    alias="orders_outbox"
+    uses-template="short" />
+  <cache
+    alias="default-query-results-region"
+    uses-template="short" />
+  <!-- -->
+  <cache-template name="long">
+    <expiry>
+      <none />
+    </expiry>
+    <resources>
+      <heap>10000</heap>
+    </resources>
+  </cache-template>
+  <cache
+    alias="default-update-timestamps-region"
+    uses-template="long" />
+</config>

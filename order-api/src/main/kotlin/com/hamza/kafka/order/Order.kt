@@ -1,7 +1,9 @@
 package com.hamza.kafka.order
 
+import com.hamza.kafka.avro.OrderPlacedEvent
 import com.hamza.kafka.commons.BaseEntity
 import com.hamza.kafka.commons.TSIDGenerator
+import com.hamza.kafka.commons.createOrderPlacedEvent
 import jakarta.persistence.Cacheable
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
@@ -30,6 +32,14 @@ data class Item(
     @field:Positive
     var unitPriceCents: Int,
 ) {
+    fun toEventItem(): com.hamza.kafka.avro.Item =
+        com.hamza.kafka.avro.Item
+            .newBuilder()
+            .setSku(sku)
+            .setQuantity(quantity)
+            .setUnitPriceCents(unitPriceCents)
+            .build()
+
     fun toDto() =
         ItemDto(
             sku = this.sku,
@@ -56,12 +66,11 @@ class Order(
     @field:NotEmpty
     var items: List<@Valid Item>,
 ) : BaseEntity(id) {
-    fun toOrderPlacedEvent() =
-        Event(
+    fun toOrderPlacedEvent(): OrderPlacedEvent =
+        createOrderPlacedEvent(
             orderId = this.id,
             customerId = this.customerId,
-            items = this.items, // FIXME: decouple
-            totalAmountCents = this.items.sumOf { it.unitPriceCents * it.quantity },
+            items = this.items.map { it.toEventItem() },
         )
 
     fun toDto() =

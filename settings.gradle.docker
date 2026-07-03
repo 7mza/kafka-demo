@@ -1,0 +1,3 @@
+// so that each subproject ignore siblings during graalvm build
+rootProject.name = "kafka-demo"
+include(":commons")
