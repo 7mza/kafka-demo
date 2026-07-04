@@ -33,20 +33,15 @@ class ProxiedPgTestContainer {
 
     @Bean
     fun pgContainer(network: Network): PostgreSQLContainer =
-        PostgreSQLContainer(POSTGRES_IMAGE)
-            .withNetwork(network)
-            .withNetworkAliases("pg")
+        PostgreSQLContainer(POSTGRES_IMAGE).withNetwork(network).withNetworkAliases("pg")
 
     @Bean
     fun toxiContainer(network: Network): ToxiproxyContainer =
-        ToxiproxyContainer("ghcr.io/shopify/toxiproxy:latest")
-            .withNetwork(network)
-            .withExposedPorts(8474, 8666)
+        ToxiproxyContainer("ghcr.io/shopify/toxiproxy:latest").withNetwork(network).withExposedPorts(8474, 8666)
 
     @Bean
     fun proxy(toxiContainer: ToxiproxyContainer): Proxy =
-        ToxiproxyClient(toxiContainer.host, toxiContainer.controlPort)
-            .createProxy("pg", "0.0.0.0:8666", "pg:5432")
+        ToxiproxyClient(toxiContainer.host, toxiContainer.controlPort).createProxy("pg", "0.0.0.0:8666", "pg:5432")
 
     @Bean
     fun properties(
@@ -63,9 +58,7 @@ class ProxiedPgTestContainer {
 }
 
 private fun kafkaContainer(network: Network): KafkaContainer =
-    KafkaContainer(KAFKA_IMAGE)
-        .withNetwork(network)
-        .withListener("kafka:19092")
+    KafkaContainer(KAFKA_IMAGE).withNetwork(network).withListener("kafka:19092")
 
 private fun registryContainer(
     network: Network,

@@ -5,6 +5,7 @@ import org.slf4j.LoggerFactory
 import org.springframework.boot.context.event.ApplicationReadyEvent
 import org.springframework.context.ApplicationListener
 import org.springframework.stereotype.Component
+import java.time.Duration.ofSeconds
 import javax.sql.DataSource
 
 interface IOutboxListener : ApplicationListener<ApplicationReadyEvent> {
@@ -21,10 +22,7 @@ class OutboxListener(
     private val logger = LoggerFactory.getLogger(javaClass)
 
     override fun onApplicationEvent(event: ApplicationReadyEvent) {
-        Thread
-            .ofVirtual()
-            .name("outbox-listener")
-            .start(::listen)
+        Thread.ofVirtual().name("outbox-listener").start(::listen)
     }
 
     override fun listen() {
@@ -47,7 +45,7 @@ class OutboxListener(
                 break
             } catch (_: Exception) {
                 logger.warn("Listener connection lost, reconnecting in 5s")
-                Thread.sleep(5_000)
+                Thread.sleep(ofSeconds(5).toMillis())
             }
         }
     }

@@ -25,7 +25,9 @@ dependencies {
 tasks {
     bootJar { enabled = false }
     bootRun { enabled = false }
+}
 
-    compileKotlin { dependsOn(generateAvroJava) }
-    compileTestKotlin { dependsOn(generateTestAvroJava) }
+sourceSets {
+    main { java.srcDir(files("build/generated-main-avro-java").builtBy("generateAvroJava")) }
+    test { java.srcDir(files("build/generated-test-avro-java").builtBy("generateTestAvroJava")) }
 }

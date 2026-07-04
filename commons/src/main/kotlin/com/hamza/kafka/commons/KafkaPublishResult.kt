@@ -7,7 +7,4 @@ data class KafkaPublishResult(
 ) {
     // progress = getting outboxes off the backlog (whether sent to kafka or flagged as dead letters)
     fun isProgressing() = this.publishedCount + this.deadLettersCount > 0
-
-    // used for simple linear time back off based on transient errors (if something is wrong with kafka, give it time to heal)
-    fun hasRecoverable() = this.recoverableErrorsCount > 0
 }

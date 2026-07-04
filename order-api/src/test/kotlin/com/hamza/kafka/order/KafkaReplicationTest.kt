@@ -8,7 +8,6 @@ import io.confluent.kafka.serializers.KafkaAvroDeserializer
 import io.confluent.kafka.serializers.KafkaAvroDeserializerConfig
 import org.apache.kafka.clients.admin.AdminClient
 import org.apache.kafka.clients.consumer.ConsumerConfig
-import org.apache.kafka.common.TopicPartitionInfo
 import org.apache.kafka.common.serialization.StringDeserializer
 import org.assertj.core.api.Assertions.assertThat
 import org.awaitility.Awaitility.await
@@ -22,17 +21,9 @@ import org.springframework.context.annotation.Import
 import org.springframework.kafka.core.DefaultKafkaConsumerFactory
 import org.springframework.kafka.core.KafkaAdmin
 import org.springframework.kafka.test.utils.KafkaTestUtils
-import org.springframework.test.context.ActiveProfiles
 import org.testcontainers.DockerClientFactory
 import java.time.Duration
 import java.util.UUID
-import java.util.concurrent.TimeUnit
-
-fun AdminClient.describeTopicPartitions(topicName: String): List<TopicPartitionInfo> =
-    describeTopics(listOf(topicName))
-        .topicNameValues()[topicName]!!
-        .get(5, TimeUnit.SECONDS)
-        .partitions()
 
 @SpringBootTest(
     webEnvironment = SpringBootTest.WebEnvironment.NONE,
@@ -45,17 +36,19 @@ fun AdminClient.describeTopicPartitions(topicName: String): List<TopicPartitionI
         "spring.kafka.producer.properties.request.timeout.ms=5000",
     ],
 )
-@ActiveProfiles("default", "h2")
-@Import(KafkaReplicationTestContainers::class)
+@Import(PgTestContainer::class, KafkaReplicationTestContainers::class)
 class KafkaReplicationTest {
     @Autowired
     private lateinit var service: IPublishService
 
-    @Autowired
-    private lateinit var kafkaAdmin: KafkaAdmin
-
     @Value($$"${custom.topic_name}")
     private lateinit var topicName: String
+
+    @Value($$"${custom.partitions}")
+    private val partitions: Int = 0
+
+    @Value($$"${custom.replication_factor}")
+    private val replicas: Int = 0
 
     @Value($$"${spring.kafka.producer.properties.schema.registry.url}")
     private lateinit var schemaRegistryUrl: String
@@ -66,12 +59,13 @@ class KafkaReplicationTest {
     private val broker1 = KafkaReplicationTestContainers.broker1
     private val broker2 = KafkaReplicationTestContainers.broker2
     private val broker3 = KafkaReplicationTestContainers.broker3
-
     private val brokersByNodeId = mapOf(1 to broker1, 2 to broker2, 3 to broker3)
 
-    private val adminClient by lazy { AdminClient.create(kafkaAdmin.configurationProperties) }
-
     private val dockerClient = DockerClientFactory.instance().client()
+
+    @Autowired
+    private lateinit var kafkaAdmin: KafkaAdmin
+    private val adminClient by lazy { AdminClient.create(kafkaAdmin.configurationProperties) }
 
     private val consumer by lazy {
         KafkaTestUtils
@@ -84,21 +78,14 @@ class KafkaReplicationTest {
                 put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, KafkaAvroDeserializer::class.java)
                 put(AbstractKafkaSchemaSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG, schemaRegistryUrl)
                 put(KafkaAvroDeserializerConfig.SPECIFIC_AVRO_READER_CONFIG, true)
-            }.let {
-                DefaultKafkaConsumerFactory<String, OrderPlacedEvent>(it).createConsumer()
-            }
+            }.let { DefaultKafkaConsumerFactory<String, OrderPlacedEvent>(it).createConsumer() }
     }
 
     @BeforeEach
     fun beforeEach() {
-        // check orders topic is created with replication factor 3
-        // ignoreExceptions: AdminClient calls can throw if a broker is down/recovering (routed to paused node)
-        await().ignoreExceptions().atMost(Duration.ofSeconds(30)).untilAsserted {
-            adminClient.describeTopicPartitions(topicName).first().also {
-                assertThat(it.replicas()).hasSize(3)
-                assertThat(it.isr()).hasSize(3)
-            }
-        }
+        consumer.assertSubscription(topicName)
+        adminClient.assertNodes(topicName = topicName, partitions = partitions, replicas = replicas, isr = replicas)
+        service.warmupSchemaRegistry(topicName)
     }
 
     @AfterEach
@@ -111,40 +98,21 @@ class KafkaReplicationTest {
 
     @Test
     fun `publishing still succeeds and topic stays readable when one broker is down`() {
-        // subscribe before pause so consumer is aware of everything
-        consumer.subscribe(listOf(topicName))
-        await().atMost(Duration.ofSeconds(10)).until {
-            consumer.poll(Duration.ofMillis(500))
-            consumer.assignment().isNotEmpty()
-        }
-
         // get leader
-        val leaderBefore =
-            adminClient
-                .describeTopicPartitions(topicName)
-                .first()
-                .leader()
-                .id()
-        val leaderContainer = brokersByNodeId.getValue(leaderBefore)
+        val leaderIdBefore = adminClient.getPartitionLeader(topicName = topicName, partition = 0)!!.id()
+        val leaderContainer = brokersByNodeId.getValue(leaderIdBefore)
 
         // pause leader
         dockerClient.pauseContainerCmd(leaderContainer.containerId).exec()
 
         // wait for all partitions to evict paused broker from ISR
-        await().ignoreExceptions().atMost(Duration.ofSeconds(30)).untilAsserted {
-            adminClient
-                .describeTopicPartitions(topicName)
-                .forEach { assertThat(it.isr()).hasSize(2) }
-        }
+        adminClient.assertNodes(topicName = topicName, partitions = partitions, replicas = replicas, isr = replicas - 1)
 
         // check new leader elected
-        val leaderAfter =
-            adminClient
-                .describeTopicPartitions(topicName)
-                .first()
-                .leader()
-                .id()
-        assertThat(leaderAfter).isNotEqualTo(leaderBefore)
+        adminClient
+            .getPartitionLeader(topicName = topicName, partition = 0)!!
+            .id()
+            .also { assertThat(it).isNotEqualTo(leaderIdBefore) }
 
         // publish should succeed
         // 2 surviving replicas are enough to satisfy acks=all with min.insync.replicas=2
@@ -156,19 +124,26 @@ class KafkaReplicationTest {
             )
         val outbox = event.toOutbox(topicName)
 
-        service.publish(listOf(outbox)).also {
-            assertThat(it.publishedCount).isOne
+        await().atMost(Duration.ofSeconds(30)).untilAsserted {
+            service.publish(listOf(outbox)).also { assertThat(it.publishedCount).isOne }
         }
 
         // check event is retrievable
-        KafkaTestUtils.getSingleRecord(consumer, topicName, Duration.ofSeconds(30)).also {
-            assertThat(it.value()).isEqualTo(event)
-        }
+        KafkaTestUtils
+            .getRecords(consumer, Duration.ofSeconds(30))
+            .records(topicName)
+            .filter { it.value().orderId != warmupEvent.orderId }
+            .also {
+                assertThat(it).hasSize(1)
+                it.first().also { sent ->
+                    assertThat(sent).isNotNull
+                    assertThat(sent!!.key()).isEqualTo(outbox.orderId)
+                    assertThat(sent.value()).isEqualTo(event)
+                }
+            }
 
         // resume paused and check ISR recovered
         dockerClient.unpauseContainerCmd(leaderContainer.containerId).exec()
-        await().ignoreExceptions().atMost(Duration.ofSeconds(30)).untilAsserted {
-            assertThat(adminClient.describeTopicPartitions(topicName).first().isr()).hasSize(3)
-        }
+        adminClient.assertNodes(topicName = topicName, partitions = partitions, replicas = replicas, isr = replicas)
     }
 }

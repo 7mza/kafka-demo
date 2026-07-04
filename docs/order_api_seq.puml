@@ -41,15 +41,16 @@ group listener on DB `outbox_channel`
                     timeout
                     election in progress
                     broker down
-                    ...etc
+                    schema registry unreachable
                 end note
                 API --> API : do nothing
             else non recoverable error
                 note across
                     **non recoverable/permanent errors:**
-                    payload
+                    bad payload
                     serialization
-                    ...etc
+                    incompatible schema
+                    unhandled
                 end note
                 alt attempts < max_attempts
                     API --> DB : inc attempts

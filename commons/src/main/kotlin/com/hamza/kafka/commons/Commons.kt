@@ -25,7 +25,7 @@ inline fun <reified T> writeJson(
 fun SpecificRecordBase.toJson(): String {
     val writer = SpecificDatumWriter<SpecificRecordBase>(this.schema, this.specificData)
     val out = ByteArrayOutputStream()
-    val encoder = EncoderFactory.get().jsonEncoder(this.schema, out, true)
+    val encoder = EncoderFactory.get().jsonEncoder(this.schema, out, false)
     writer.write(this, encoder)
     encoder.flush()
     return out.toString(Charsets.UTF_8)
@@ -51,14 +51,16 @@ fun createEventItem(
         .build()
 
 fun createOrderPlacedEvent(
+    evenId: String? = null,
+    occurredAt: Instant? = null,
     orderId: String,
     customerId: String,
     items: List<Item>,
 ): OrderPlacedEvent =
     OrderPlacedEvent
         .newBuilder()
-        .setEventId(TSIDGenerator.next())
-        .setOccurredAt(Instant.now().truncatedTo(ChronoUnit.MILLIS))
+        .setEventId(evenId ?: TSIDGenerator.next())
+        .setOccurredAt(occurredAt ?: Instant.now().truncatedTo(ChronoUnit.MILLIS))
         .setOrderId(orderId)
         .setCustomerId(customerId)
         .setItems(items)

@@ -42,8 +42,6 @@ dependencies {
     testImplementation("org.testcontainers:testcontainers-kafka")
     testImplementation("org.testcontainers:testcontainers-postgresql")
     testImplementation("org.testcontainers:testcontainers-toxiproxy")
-
-    testRuntimeOnly("com.h2database:h2")
 }
 
 val dockerRegistry = property("dockerRegistry") as String

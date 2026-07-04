@@ -24,10 +24,7 @@ class JCacheTest {
     private lateinit var statistics: Statistics
 
     private val order =
-        Order(
-            customerId = "user-2203",
-            items = listOf(Item(sku = "sku-01", quantity = 10, unitPriceCents = 199)),
-        )
+        Order(customerId = "user-2203", items = listOf(Item(sku = "sku-01", quantity = 10, unitPriceCents = 199)))
 
     @BeforeEach
     fun beforeEach() {

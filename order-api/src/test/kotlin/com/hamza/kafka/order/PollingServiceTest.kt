@@ -5,7 +5,7 @@ import org.junit.jupiter.api.Test
 import org.mockito.kotlin.atLeastOnce
 import org.mockito.kotlin.verify
 import org.springframework.boot.test.context.SpringBootTest
-import org.springframework.test.context.ActiveProfiles
+import org.springframework.context.annotation.Import
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean
 import java.time.Duration
 
@@ -13,7 +13,7 @@ import java.time.Duration
     webEnvironment = SpringBootTest.WebEnvironment.NONE,
     properties = ["custom.poll_delay=PT1S", "custom.poll_initial_delay=PT0S"],
 )
-@ActiveProfiles("default", "h2")
+@Import(PgTestContainer::class)
 class PollingServiceTest {
     @MockitoSpyBean
     private lateinit var service: IPollingService

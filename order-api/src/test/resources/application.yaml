@@ -151,10 +151,3 @@ springdoc:
     operationsSorter: method
     path: /swagger-ui
     tagsSorter: alpha
----
-spring:
-  datasource:
-    driverClassName: org.h2.Driver
-  config:
-    activate:
-      on-profile: h2

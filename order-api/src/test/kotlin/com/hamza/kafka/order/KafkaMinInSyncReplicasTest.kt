@@ -1,8 +1,14 @@
 package com.hamza.kafka.order
 
+import com.hamza.kafka.avro.OrderPlacedEvent
 import com.hamza.kafka.commons.createEventItem
 import com.hamza.kafka.commons.createOrderPlacedEvent
+import io.confluent.kafka.serializers.AbstractKafkaSchemaSerDeConfig
+import io.confluent.kafka.serializers.KafkaAvroDeserializer
+import io.confluent.kafka.serializers.KafkaAvroDeserializerConfig
 import org.apache.kafka.clients.admin.AdminClient
+import org.apache.kafka.clients.consumer.ConsumerConfig
+import org.apache.kafka.common.serialization.StringDeserializer
 import org.assertj.core.api.Assertions.assertThat
 import org.awaitility.Awaitility.await
 import org.junit.jupiter.api.AfterEach
@@ -12,10 +18,12 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.context.annotation.Import
+import org.springframework.kafka.core.DefaultKafkaConsumerFactory
 import org.springframework.kafka.core.KafkaAdmin
-import org.springframework.test.context.ActiveProfiles
+import org.springframework.kafka.test.utils.KafkaTestUtils
 import org.testcontainers.DockerClientFactory
 import java.time.Duration
+import java.util.UUID
 
 @SpringBootTest(
     webEnvironment = SpringBootTest.WebEnvironment.NONE,
@@ -25,40 +33,61 @@ import java.time.Duration
         "custom.replication_factor=3",
     ],
 )
-@ActiveProfiles("default", "h2")
-@Import(KafkaReplicationTestContainers::class)
+@Import(PgTestContainer::class, KafkaReplicationTestContainers::class)
 class KafkaMinInSyncReplicasTest {
     @Autowired
     private lateinit var service: IPublishService
 
-    @Autowired
-    private lateinit var kafkaAdmin: KafkaAdmin
-
     @Value($$"${custom.topic_name}")
     private lateinit var topicName: String
+
+    @Value($$"${custom.partitions}")
+    private val partitions: Int = 0
+
+    @Value($$"${custom.replication_factor}")
+    private val replicas: Int = 0
+
+    @Value($$"${spring.kafka.producer.properties.schema.registry.url}")
+    private lateinit var schemaRegistryUrl: String
+
+    @Value($$"${spring.kafka.bootstrap-servers}")
+    private lateinit var bootstrapServers: String
 
     private val broker1 = KafkaReplicationTestContainers.broker1
     private val broker2 = KafkaReplicationTestContainers.broker2
     private val broker3 = KafkaReplicationTestContainers.broker3
-
     private val brokersByNodeId = mapOf(1 to broker1, 2 to broker2, 3 to broker3)
-
-    private val adminClient by lazy { AdminClient.create(kafkaAdmin.configurationProperties) }
 
     private val dockerClient = DockerClientFactory.instance().client()
 
+    @Autowired
+    private lateinit var kafkaAdmin: KafkaAdmin
+    private val adminClient by lazy { AdminClient.create(kafkaAdmin.configurationProperties) }
+
+    private val consumer by lazy {
+        KafkaTestUtils
+            .consumerProps(bootstrapServers, UUID.randomUUID().toString(), true)
+            .apply {
+                put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "latest")
+                put(ConsumerConfig.METADATA_MAX_AGE_CONFIG, "1000")
+                put(ConsumerConfig.REQUEST_TIMEOUT_MS_CONFIG, "5000")
+                put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer::class.java)
+                put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, KafkaAvroDeserializer::class.java)
+                put(AbstractKafkaSchemaSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG, schemaRegistryUrl)
+                put(KafkaAvroDeserializerConfig.SPECIFIC_AVRO_READER_CONFIG, true)
+            }.let { DefaultKafkaConsumerFactory<String, OrderPlacedEvent>(it).createConsumer() }
+    }
+
     @BeforeEach
     fun beforeEach() {
-        await().ignoreExceptions().atMost(Duration.ofSeconds(30)).untilAsserted {
-            adminClient.describeTopicPartitions(topicName).first().also {
-                assertThat(it.replicas()).hasSize(3)
-                assertThat(it.isr()).hasSize(3)
-            }
-        }
+        consumer.assertSubscription(topicName)
+        adminClient.assertNodes(topicName = topicName, partitions = partitions, replicas = replicas, isr = replicas)
+        service.warmupSchemaRegistry(topicName)
     }
 
     @AfterEach
     fun afterEach() {
+        consumer.close()
         brokersByNodeId.values.forEach { runCatching { dockerClient.unpauseContainerCmd(it.containerId).exec() } }
     }
 
@@ -68,11 +97,7 @@ class KafkaMinInSyncReplicasTest {
         dockerClient.pauseContainerCmd(broker3.containerId).exec()
 
         // wait for all partitions to evict paused broker from ISR
-        await().ignoreExceptions().atMost(Duration.ofSeconds(30)).untilAsserted {
-            adminClient
-                .describeTopicPartitions(topicName)
-                .forEach { assertThat(it.isr()).hasSize(2) }
-        }
+        adminClient.assertNodes(topicName = topicName, partitions = partitions, replicas = replicas, isr = replicas - 1)
 
         val outbox =
             createOrderPlacedEvent(
@@ -83,14 +108,14 @@ class KafkaMinInSyncReplicasTest {
 
         // broker reject with NotEnoughReplicasException (transient failure)
         // publish should return empty (nothing succeeded) and attempts must not be inc
-        service.publish(listOf(outbox)).also { assertThat(it.publishedCount).isZero }
+        await().atMost(Duration.ofSeconds(30)).untilAsserted {
+            service.publish(listOf(outbox)).also { assertThat(it.publishedCount).isZero }
+        }
         assertThat(outbox.attempts).isZero
         assertThat(outbox.publishedAt).isNull()
 
         // resume paused and check ISR recovered
         dockerClient.unpauseContainerCmd(broker3.containerId).exec()
-        await().ignoreExceptions().atMost(Duration.ofSeconds(30)).untilAsserted {
-            assertThat(adminClient.describeTopicPartitions(topicName).first().isr()).hasSize(3)
-        }
+        adminClient.assertNodes(topicName = topicName, partitions = partitions, replicas = replicas, isr = replicas)
     }
 }

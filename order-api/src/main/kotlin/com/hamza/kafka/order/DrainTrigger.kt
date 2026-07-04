@@ -26,7 +26,10 @@ class DrainTrigger(
         }
         try {
             while (true) {
-                if (backOff.isActive()) break
+                if (backOff.isActive()) {
+                    logger.info("BackOff cooldown is active")
+                    break
+                }
                 val result = service.drain() ?: break
                 backOff.observe(result)
             }

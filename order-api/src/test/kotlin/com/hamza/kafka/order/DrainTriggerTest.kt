@@ -39,14 +39,14 @@ class DrainTriggerTest {
         val trigger = DrainTrigger(service, backOff)
 
         val a = Thread.ofVirtual().start { trigger.trigger() }
-        enter.await(2, TimeUnit.SECONDS).let { assertThat(it).isTrue }
-        assertThat(calls.get()).isEqualTo(1)
+        enter.await(2, TimeUnit.SECONDS).also { assertThat(it).isTrue }
+        assertThat(calls.get()).isOne
         verify(service, times(1)).drain()
 
         val b = Thread.ofVirtual().start { trigger.trigger() }
         b.join(2000)
         assertThat(b.isAlive).isFalse
-        assertThat(calls.get()).isEqualTo(1)
+        assertThat(calls.get()).isOne
         verify(service, times(1)).drain()
 
         exit.countDown()

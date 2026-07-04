@@ -29,17 +29,21 @@ class DrainBackOff(
     override fun isActive() = clock.instant().isBefore(cooldownUntil.get())
 
     /* observe result of publish service
-     * if we're not progressing
+     * if we're not progressing (nothing published or dead-lettered)
      *  record for how many consecutive cycle
      *  then use it to create a linear cooldown
      *  this CD will prevent any drain trigger (poll, CDC, self)
+     *
+     *  back off on any no progress cycle not just recoverable ones
+     *  (batch stuck on permanent errors < max_attempts would otherwise loop quickly until max attempts)
+     *
      * if we're progressing
      *  reset
      */
     override fun observe(result: KafkaPublishResult) {
         if (result.isProgressing()) {
             consecutiveNoProgress.set(0)
-        } else if (result.hasRecoverable()) {
+        } else {
             val n = consecutiveNoProgress.incrementAndGet()
             val coolDownMs = Duration.ofMillis((n * COOLDOWN_STEP_MS).coerceAtMost(MAX_COOLDOWN_MS))
             val until = clock.instant().plus(coolDownMs)

@@ -1,5 +1,7 @@
-package com.hamza.kafka.commons
+package com.hamza.kafka.order
 
+import com.hamza.kafka.commons.DrainBackOff
+import com.hamza.kafka.commons.KafkaPublishResult
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import java.time.Clock
@@ -7,6 +9,7 @@ import java.time.Instant
 import java.time.ZoneId
 import java.time.ZoneOffset
 
+// placed here instead of commons for GraalVM tracing-agent to intercept it
 class DrainBackOffTest {
     private var now = Instant.parse("2026-07-02T00:00:00Z")
 
@@ -25,9 +28,19 @@ class DrainBackOffTest {
 
     private val recoverable = KafkaPublishResult(recoverableErrorsCount = 1)
 
+    private val permanentNoProgress = KafkaPublishResult()
+
     @Test
     fun `progress = no backoff`() {
         backOff.observe(progressing)
+        assertThat(backOff.isActive()).isFalse
+    }
+
+    @Test
+    fun `no progress on permanent errors also back off (no fast loop)`() {
+        backOff.observe(permanentNoProgress)
+        assertThat(backOff.isActive()).isTrue
+        now = now.plusSeconds(11)
         assertThat(backOff.isActive()).isFalse
     }
 

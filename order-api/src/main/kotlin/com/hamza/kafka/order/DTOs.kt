@@ -23,12 +23,7 @@ data class ItemDto(
     @field:Schema(example = "199")
     val unitPriceCents: Int,
 ) {
-    fun toEntity() =
-        Item(
-            sku = this.sku,
-            quantity = this.quantity,
-            unitPriceCents = this.unitPriceCents,
-        )
+    fun toEntity() = Item(sku = this.sku, quantity = this.quantity, unitPriceCents = this.unitPriceCents)
 }
 
 data class OrderGetDto(
@@ -48,11 +43,7 @@ data class OrderPostDto(
     @field:NotEmpty
     val items: List<@Valid ItemDto>,
 ) {
-    fun toEntity() =
-        Order(
-            customerId = this.customerId,
-            items = this.items.map { it.toEntity() },
-        )
+    fun toEntity() = Order(customerId = this.customerId, items = this.items.map { it.toEntity() })
 }
 
 @Schema(description = "outbox record for a placed order")

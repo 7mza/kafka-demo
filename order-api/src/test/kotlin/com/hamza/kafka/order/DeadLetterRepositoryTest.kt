@@ -53,8 +53,15 @@ class DeadLetterRepositoryTest {
 
     @Test
     fun `outbox row not respecting lastError validation pattern should be rejected with an error`() {
-        assertThrows<ConstraintViolationException> {
-            outboxRepo.saveAndFlush(orders.last().apply { lastError = " " })
-        }
+        val invalid =
+            Outbox(
+                id = TSIDGenerator.next(),
+                orderId = TSIDGenerator.next(),
+                eventType = "event3",
+                topic = "topic",
+                payload = "{}",
+                lastError = " ",
+            )
+        assertThrows<ConstraintViolationException> { outboxRepo.saveAndFlush(invalid) }
     }
 }

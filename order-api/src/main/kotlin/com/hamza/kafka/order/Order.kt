@@ -40,12 +40,7 @@ data class Item(
             .setUnitPriceCents(unitPriceCents)
             .build()
 
-    fun toDto() =
-        ItemDto(
-            sku = this.sku,
-            quantity = this.quantity,
-            unitPriceCents = this.unitPriceCents,
-        )
+    fun toDto() = ItemDto(sku = this.sku, quantity = this.quantity, unitPriceCents = this.unitPriceCents)
 }
 
 @Entity

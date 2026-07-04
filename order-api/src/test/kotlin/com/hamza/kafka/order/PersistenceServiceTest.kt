@@ -104,32 +104,24 @@ class PersistenceServiceTest {
     @Test
     fun getOrderById() {
         val saved = service.save(request)
-        service.getOrderById(saved.id).also {
-            assertThat(it).isEqualTo(saved)
-        }
+        service.getOrderById(saved.id).also { assertThat(it).isEqualTo(saved) }
     }
 
     @Test
     fun getOrderByWrongId() {
-        assertThrows<ResourceNotFoundException> {
-            service.getOrderById("")
-        }
+        assertThrows<ResourceNotFoundException> { service.getOrderById("") }
     }
 
     @Test
     fun getOutboxByOrderId() {
         val order = service.save(request)
         val outbox = outboxRepo.findByOrderId(order.id)
-        service.getOutboxByOrderId(order.id).also {
-            assertThat(it).isEqualTo(outbox)
-        }
+        service.getOutboxByOrderId(order.id).also { assertThat(it).isEqualTo(outbox) }
     }
 
     @Test
     fun getOutboxByWrongOrderId() {
-        assertThrows<ResourceNotFoundException> {
-            service.getOutboxByOrderId("")
-        }
+        assertThrows<ResourceNotFoundException> { service.getOutboxByOrderId("") }
     }
 
     @Test

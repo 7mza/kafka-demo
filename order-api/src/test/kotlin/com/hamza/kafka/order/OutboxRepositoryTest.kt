@@ -126,8 +126,7 @@ class OutboxRepositoryTest {
 
         assertThat(firstBatch.map { it.id }).doesNotContainAnyElementsOf(secondBatch.map { it.id })
 
-        repo.retrieveUnpublished(10, 10).also {
-            assertThat(it).hasSize(2) // check freed after release
-        }
+        // check freed after release
+        repo.retrieveUnpublished(10, 10).also { assertThat(it).hasSize(2) }
     }
 }

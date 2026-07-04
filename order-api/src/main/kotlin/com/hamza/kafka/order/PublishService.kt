@@ -3,6 +3,7 @@ package com.hamza.kafka.order
 import com.hamza.kafka.avro.OrderPlacedEvent
 import com.hamza.kafka.commons.KafkaPublishResult
 import com.hamza.kafka.commons.fromJson
+import io.confluent.kafka.schemaregistry.client.rest.exceptions.RestClientException
 import jakarta.transaction.Transactional
 import org.apache.commons.lang3.exception.ExceptionUtils
 import org.apache.kafka.common.errors.RetriableException
@@ -11,6 +12,7 @@ import org.springframework.beans.factory.annotation.Value
 import org.springframework.kafka.core.KafkaTemplate
 import org.springframework.kafka.support.SendResult
 import org.springframework.stereotype.Service
+import java.io.IOException
 import java.time.Duration
 import java.time.Instant
 import java.time.temporal.ChronoUnit
@@ -42,7 +44,7 @@ class PublishService(
                             // exception here will only fail this task future, other tasks are not affected
                             // exception sits on this future until .get() below is called
                             val event = fromJson<OrderPlacedEvent>(it.payload)
-                            // for demo: force permanent ex so this outbox dead letters after max_attempts
+                            // for demo: force dead letter
                             check(!event.customerId.contains("fail")) { "forced failure for demo" }
                             kafkaTemplate
                                 .send(it.topic, it.orderId, event)
@@ -59,11 +61,9 @@ class PublishService(
                     outbox.publishedAt = Instant.now().truncatedTo(ChronoUnit.MILLIS)
                 } catch (ex: Exception) {
                     // catch both: task failure + backstop (giving up waiting on it)
-                    val rootCause = ExceptionUtils.getRootCause(ex) ?: ex
-                    if (rootCause is RetriableException || rootCause is TimeoutException) {
+                    if (ex.isTransientFailure()) {
                         result.recoverableErrorsCount++
-                        // transient ex (broker unreachable, isr below min_inSync, leader election in progress, ...)
-                        // don't inc attempts, next polls should retry
+                        // transient ex: don't inc attempts, next polls should retry
                         logger.warn(
                             "transient failure for outbox: '{}', topic: '{}', will retry",
                             outbox.id,
@@ -71,9 +71,12 @@ class PublishService(
                             ex,
                         )
                     } else {
-                        // permanent ex (bad payload, invalid topic, serialization error, ...)
-                        // inc attempts, next polls should retry with upper limit
-                        outbox.attempts++
+                        // permanent ex: inc attempts, next polls should retry with upper limit
+                        if (ex.message?.contains("forced failure for demo") ?: false) { // for demo: force dead letter
+                            outbox.attempts = maxAttempts
+                        } else {
+                            outbox.attempts++
+                        }
                         if (outbox.attempts >= maxAttempts) {
                             result.deadLettersCount++
                             logger.error(
@@ -82,6 +85,7 @@ class PublishService(
                                 outbox.topic,
                                 ex,
                             )
+                            val rootCause = ExceptionUtils.getRootCause(ex) ?: ex
                             val simpleName = rootCause.javaClass.simpleName
                             outbox.lastError =
                                 rootCause.message?.takeIf { it.isNotBlank() }?.let { "$simpleName: $it" } ?: simpleName
@@ -97,3 +101,25 @@ class PublishService(
         }
     }
 }
+
+/*
+ * transient/recoverable failure:
+ *  RetriableException: kafka errors (isr below min_inSync, leader election, ...)
+ *  TimeoutException: this service ACK backstop
+ *  IOException: schema registry unreachable
+ *  RestClientException 5xx: schema registry reachable but unhealthy
+ *
+ * permanent/non-recoverable failure:
+ *  anything else (bad payload, incompatible schemas / RestClientException 4xx, unhandled)
+ *
+ * ex scan because
+ *  registry not reachable throw RestClientException 5xx = transient
+ *  invalid schema throw RestClientException 4xx = permanent
+ */
+fun Throwable.isTransientFailure(): Boolean =
+    ExceptionUtils.getThrowableList(this).any {
+        it is RetriableException ||
+            it is TimeoutException ||
+            it is IOException ||
+            (it is RestClientException && it.status >= 500)
+    }

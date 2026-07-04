@@ -66,8 +66,7 @@ class ControllerTest {
 
     @Test
     fun `create invalid order - customerId @NotBlank - and check 400`() {
-        val order =
-            Order(customerId = "   ", items = listOf(Item(sku = "sku-01", quantity = 10, unitPriceCents = 199)))
+        val order = Order(customerId = "   ", items = listOf(Item(sku = "sku-01", quantity = 10, unitPriceCents = 199)))
         val request = OrderPostDto(customerId = order.customerId, items = order.items.map { it.toDto() })
         val json = writeJson(request, objectMapper)
 
@@ -87,8 +86,7 @@ class ControllerTest {
 
     @Test
     fun `create invalid order - customerId @NotEmpty - and check 400`() {
-        val order =
-            Order(customerId = "", items = listOf(Item(sku = "sku-01", quantity = 10, unitPriceCents = 199)))
+        val order = Order(customerId = "", items = listOf(Item(sku = "sku-01", quantity = 10, unitPriceCents = 199)))
         val request = OrderPostDto(customerId = order.customerId, items = order.items.map { it.toDto() })
         val json = writeJson(request, objectMapper)
 
