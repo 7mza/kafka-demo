@@ -1,7 +1,7 @@
 package com.hamza.kafka.commons
 
-import com.hamza.kafka.avro.Item
-import com.hamza.kafka.avro.OrderPlacedEvent
+import com.hamza.commons.Item
+import com.hamza.commons.OrderPlacedEvent
 import org.apache.avro.io.DecoderFactory
 import org.apache.avro.io.EncoderFactory
 import org.apache.avro.specific.SpecificDatumReader

@@ -1,6 +1,6 @@
 package com.hamza.kafka.order
 
-import com.hamza.kafka.avro.OrderPlacedEvent
+import com.hamza.commons.OrderPlacedEvent
 import com.hamza.kafka.commons.createEventItem
 import com.hamza.kafka.commons.createOrderPlacedEvent
 import io.confluent.kafka.serializers.AbstractKafkaSchemaSerDeConfig
@@ -10,6 +10,7 @@ import org.apache.kafka.clients.admin.AdminClient
 import org.apache.kafka.clients.consumer.ConsumerConfig
 import org.apache.kafka.common.serialization.StringDeserializer
 import org.assertj.core.api.Assertions.assertThat
+import org.awaitility.Awaitility.await
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -21,19 +22,20 @@ import org.springframework.kafka.core.DefaultKafkaConsumerFactory
 import org.springframework.kafka.core.KafkaAdmin
 import org.springframework.kafka.test.utils.KafkaTestUtils
 import org.testcontainers.DockerClientFactory
-import org.testcontainers.kafka.KafkaContainer
 import java.time.Duration
 import java.util.UUID
 
 @SpringBootTest(
     webEnvironment = SpringBootTest.WebEnvironment.NONE,
     properties = [
-        // send is a future, even when kafka is unreachable event is sent and stays on producer accumulator until this expire
-        "spring.kafka.producer.properties.delivery.timeout.ms=3000", // >= linger.ms + request.timeout.ms
+        "custom.min_insync_replicas=3",
+        "custom.partitions=3",
+        "custom.replication_factor=3",
+        "custom.topic_name=isr.test.topic",
     ],
 )
-@Import(PgTestContainer::class, PausableKafkaTestContainer::class)
-class PublishServiceTimeoutTest {
+@Import(PgTestContainer::class, KafkaReplicationTestContainers::class)
+class KafkaInfraMinIsrTest {
     @Autowired
     private lateinit var service: IPublishService
 
@@ -49,8 +51,15 @@ class PublishServiceTimeoutTest {
     @Value($$"${spring.kafka.producer.properties.schema.registry.url}")
     private lateinit var schemaRegistryUrl: String
 
-    @Autowired
-    private lateinit var pKafkaContainer: KafkaContainer
+    @Value($$"${spring.kafka.bootstrap-servers}")
+    private lateinit var bootstrapServers: String
+
+    private val broker1 = KafkaReplicationTestContainers.broker1
+    private val broker2 = KafkaReplicationTestContainers.broker2
+    private val broker3 = KafkaReplicationTestContainers.broker3
+    private val brokersByNodeId = mapOf(1 to broker1, 2 to broker2, 3 to broker3)
+
+    private val dockerClient = DockerClientFactory.instance().client()
 
     @Autowired
     private lateinit var kafkaAdmin: KafkaAdmin
@@ -58,19 +67,17 @@ class PublishServiceTimeoutTest {
 
     private val consumer by lazy {
         KafkaTestUtils
-            .consumerProps(pKafkaContainer.bootstrapServers, UUID.randomUUID().toString(), true)
+            .consumerProps(bootstrapServers, UUID.randomUUID().toString(), true)
             .apply {
                 put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "latest")
                 put(ConsumerConfig.METADATA_MAX_AGE_CONFIG, "1000")
-                put(ConsumerConfig.REQUEST_TIMEOUT_MS_CONFIG, "2000")
+                put(ConsumerConfig.REQUEST_TIMEOUT_MS_CONFIG, "5000")
                 put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer::class.java)
                 put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, KafkaAvroDeserializer::class.java)
                 put(AbstractKafkaSchemaSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG, schemaRegistryUrl)
                 put(KafkaAvroDeserializerConfig.SPECIFIC_AVRO_READER_CONFIG, true)
             }.let { DefaultKafkaConsumerFactory<String, OrderPlacedEvent>(it).createConsumer() }
     }
-
-    private val dockerClient = DockerClientFactory.instance().client()
 
     @BeforeEach
     fun beforeEach() {
@@ -82,49 +89,34 @@ class PublishServiceTimeoutTest {
     @AfterEach
     fun afterEach() {
         consumer.close()
-        runCatching { dockerClient.unpauseContainerCmd(pKafkaContainer.containerId).exec() }
+        brokersByNodeId.values.forEach { runCatching { dockerClient.unpauseContainerCmd(it.containerId).exec() } }
     }
 
     @Test
-    fun `publish should not inc attempts when kafka does not ack in time (transient failure)`() {
-        // gen event + outbox
-        val event =
+    fun `no write possible when ISR drops below threshold`() {
+        // pausing any 1 node drop ISR to 2 which is below min.insync.replicas=3
+        dockerClient.pauseContainerCmd(broker3.containerId).exec()
+
+        // wait for all partitions to evict paused broker from ISR
+        adminClient.assertNodes(topicName = topicName, partitions = partitions, replicas = replicas, isr = replicas - 1)
+
+        val outbox =
             createOrderPlacedEvent(
                 orderId = "order_2203",
                 customerId = "user_2203",
-                items = listOf(createEventItem(sku = "sku-01", quantity = 10, unitPriceCents = 199)),
-            )
-        val outbox =
-            event.toOutbox(topicName).also {
-                assertThat(it.attempts).isZero
-                assertThat(it.publishedAt).isNull()
-                assertThat(it.lastError).isNull()
-            }
+                items = listOf(createEventItem(sku = "sku-01", quantity = 1, unitPriceCents = 100)),
+            ).toOutbox(topicName)
 
-        // pause kafka
-        dockerClient.pauseContainerCmd(pKafkaContainer.containerId).exec()
-
-        // publish event to kafka
-        service.publish(listOf(outbox)).also { assertThat(it.publishedCount).isZero }
-        // timeout is a transient infrastructure failure, attempts should not be inc
+        // broker reject with NotEnoughReplicasException (transient failure)
+        // publish should return empty (nothing succeeded) and attempts must not be inc
+        await().atMost(Duration.ofSeconds(30)).untilAsserted {
+            service.publish(listOf(outbox)).also { assertThat(it.publishedCount).isZero }
+        }
         assertThat(outbox.attempts).isZero
-        assertThat(outbox.publishedAt).isNull() // check still not published
-        assertThat(outbox.lastError).isNull()
+        assertThat(outbox.publishedAt).isNull()
 
         // resume paused and check ISR recovered
-        dockerClient.unpauseContainerCmd(pKafkaContainer.containerId).exec()
+        dockerClient.unpauseContainerCmd(broker3.containerId).exec()
         adminClient.assertNodes(topicName = topicName, partitions = partitions, replicas = replicas, isr = replicas)
-
-        return
-        // FIXME: proxy disable not pause
-        // even when container is paused, event can land in kafka after resume because it's a future on accumulator + TCP
-
-        // check nothing (apart from warmup) was sent to kafka
-        KafkaTestUtils
-            .getRecords(consumer, Duration.ofSeconds(30))
-            .records(topicName)
-            .map { it.value() }
-            .filter { it.orderId != warmupEvent.orderId }
-            .also { assertThat(it).isEmpty() }
     }
 }

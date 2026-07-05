@@ -1,6 +1,6 @@
 package com.hamza.kafka.order
 
-import com.hamza.kafka.avro.OrderPlacedEvent
+import com.hamza.commons.OrderPlacedEvent
 import com.hamza.kafka.commons.BaseOutbox
 import com.hamza.kafka.commons.toJson
 import jakarta.persistence.Cacheable

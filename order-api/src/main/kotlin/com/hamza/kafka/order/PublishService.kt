@@ -1,6 +1,6 @@
 package com.hamza.kafka.order
 
-import com.hamza.kafka.avro.OrderPlacedEvent
+import com.hamza.commons.OrderPlacedEvent
 import com.hamza.kafka.commons.KafkaPublishResult
 import com.hamza.kafka.commons.fromJson
 import io.confluent.kafka.schemaregistry.client.rest.exceptions.RestClientException

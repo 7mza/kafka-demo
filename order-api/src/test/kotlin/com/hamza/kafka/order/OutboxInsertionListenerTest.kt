@@ -14,14 +14,7 @@ import org.springframework.context.annotation.Import
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean
 import java.time.Duration
 
-@SpringBootTest(
-    webEnvironment = SpringBootTest.WebEnvironment.NONE,
-    properties = [
-        "custom.batch_size=0",
-        "spring.jpa.hibernate.ddl-auto=validate",
-        "spring.liquibase.enabled=true",
-    ],
-)
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)
 @Import(ProxiedPgTestContainer::class)
 class OutboxInsertionListenerTest {
     @Autowired

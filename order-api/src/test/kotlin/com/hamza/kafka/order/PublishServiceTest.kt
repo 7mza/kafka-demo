@@ -1,6 +1,6 @@
 package com.hamza.kafka.order
 
-import com.hamza.kafka.avro.OrderPlacedEvent
+import com.hamza.commons.OrderPlacedEvent
 import com.hamza.kafka.commons.createEventItem
 import com.hamza.kafka.commons.createOrderPlacedEvent
 import io.confluent.kafka.serializers.AbstractKafkaSchemaSerDeConfig
@@ -21,11 +21,11 @@ import org.springframework.context.annotation.Import
 import org.springframework.kafka.core.DefaultKafkaConsumerFactory
 import org.springframework.kafka.core.KafkaAdmin
 import org.springframework.kafka.test.utils.KafkaTestUtils
+import org.testcontainers.DockerClientFactory
 import org.testcontainers.kafka.KafkaContainer
 import java.time.Duration
 import java.util.UUID
 
-// FIXME: duplicate test with E2E
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)
 @Import(PgTestContainer::class, KafkaTestContainer::class)
 class PublishServiceTest {
@@ -65,6 +65,8 @@ class PublishServiceTest {
             }.let { DefaultKafkaConsumerFactory<String, OrderPlacedEvent>(it).createConsumer() }
     }
 
+    private val dockerClient = DockerClientFactory.instance().client()
+
     @BeforeEach
     fun beforeEach() {
         consumer.assertSubscription(topicName)
@@ -75,6 +77,7 @@ class PublishServiceTest {
     @AfterEach
     fun afterEach() {
         consumer.close()
+        runCatching { dockerClient.unpauseContainerCmd(kafkaContainer.containerId).exec() }
     }
 
     @Test
@@ -106,6 +109,51 @@ class PublishServiceTest {
                     assertThat(sent.value()).isEqualTo(event)
                 }
             }
+    }
+
+    @Test
+    fun `publish should not inc attempts when kafka does not ack in time (transient failure)`() {
+        // gen event + outbox
+        val event =
+            createOrderPlacedEvent(
+                orderId = "order_2203",
+                customerId = "user_2203",
+                items = listOf(createEventItem(sku = "sku-01", quantity = 10, unitPriceCents = 199)),
+            )
+        val outbox =
+            event.toOutbox(topicName).also {
+                assertThat(it.attempts).isZero
+                assertThat(it.publishedAt).isNull()
+                assertThat(it.lastError).isNull()
+            }
+
+        // pause kafka
+        dockerClient.pauseContainerCmd(kafkaContainer.containerId).exec()
+
+        // publish event to kafka
+        await().atMost(Duration.ofSeconds(30)).untilAsserted {
+            service.publish(listOf(outbox)).also { assertThat(it.publishedCount).isZero }
+        }
+        // timeout is a transient infrastructure failure, attempts should not be inc
+        assertThat(outbox.attempts).isZero
+        assertThat(outbox.publishedAt).isNull() // check still not published
+        assertThat(outbox.lastError).isNull()
+
+        // resume paused and check ISR recovered
+        dockerClient.unpauseContainerCmd(kafkaContainer.containerId).exec()
+        adminClient.assertNodes(topicName = topicName, partitions = partitions, replicas = replicas, isr = replicas)
+
+        return
+        // FIXME: proxy disable not pause
+        // even when container is paused, event can land in kafka after resume because it's a future on accumulator + TCP
+
+        // check nothing (apart from warmup) was sent to kafka
+        KafkaTestUtils
+            .getRecords(consumer, Duration.ofSeconds(30))
+            .records(topicName)
+            .map { it.value() }
+            .filter { it.orderId != warmupEvent.orderId }
+            .also { assertThat(it).isEmpty() }
     }
 
     @Test

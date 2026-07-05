@@ -13,22 +13,8 @@ logging:
   level:
     com.hamza: debug
     org.apache.kafka: error
-    org.hibernate:
-      SQL: debug
-      stat: debug
-    org.zalando.logbook: trace
-management:
-  endpoints:
-    web:
-      exposure:
-        include: health,info
-  health:
-    livenessstate:
-      enabled: true
-    readinessstate:
-      enabled: true
-preliquibase:
-  enabled: false
+    org.hibernate.SQL_SLOW: info
+    root: warn
 server:
   compression:
     additional-mime-types: application/x-ndjson,text/event-stream
@@ -47,11 +33,13 @@ spring:
       - optional:file:.env[.properties]
   datasource:
     driverClassName: org.postgresql.Driver
+    hikari:
+      connection-init-sql: set search_path to "${spring.application.name}"
   jackson:
     default-property-inclusion: non_null
   jpa:
     hibernate:
-      ddl-auto: create-drop
+      ddl-auto: validate
     open-in-view: false
     properties:
       hibernate:
@@ -62,6 +50,7 @@ spring:
           use_query_cache: true
           use_second_level_cache: true
         default_batch_fetch_size: 32
+        default_schema: ${spring.application.name}
         enable_lazy_load_no_trans: false
         format_sql: false
         generate_statistics: true
@@ -114,8 +103,8 @@ spring:
       concurrency: 1
   liquibase:
     analytics-enabled: false
-    drop-first: true
-    enabled: false
+    default-schema: ${spring.application.name}
+    enabled: true
   main:
     banner-mode: off
   output:
@@ -131,7 +120,6 @@ spring:
     error:
       include-exception: true
       include-message: always
-      include-stacktrace: always
 springdoc:
   api-docs:
     path: /api-docs

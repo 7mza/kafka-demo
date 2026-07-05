@@ -14,6 +14,7 @@ import org.testcontainers.lifecycle.Startables
 import org.testcontainers.postgresql.PostgreSQLContainer
 import org.testcontainers.toxiproxy.ToxiproxyContainer
 import org.testcontainers.utility.DockerImageName
+import java.util.UUID
 
 private val KAFKA_IMAGE = DockerImageName.parse("apache/kafka:latest")
 private val POSTGRES_IMAGE = DockerImageName.parse("postgres:alpine")
@@ -25,40 +26,35 @@ class PgTestContainer {
     fun pgContainer(): PostgreSQLContainer = PostgreSQLContainer(POSTGRES_IMAGE)
 }
 
-@Suppress("SpringJavaInjectionPointsAutowiringInspection")
 @TestConfiguration(proxyBeanMethods = false)
 class ProxiedPgTestContainer {
     @Bean
-    fun network(): Network = Network.newNetwork()
+    fun pNetwork(): Network = Network.newNetwork()
 
     @Bean
-    fun pgContainer(network: Network): PostgreSQLContainer =
-        PostgreSQLContainer(POSTGRES_IMAGE).withNetwork(network).withNetworkAliases("pg")
+    @ServiceConnection
+    fun pPgContainer(pNetwork: Network): PostgreSQLContainer =
+        PostgreSQLContainer(POSTGRES_IMAGE).withNetwork(pNetwork).withNetworkAliases("pg")
 
     @Bean
-    fun toxiContainer(network: Network): ToxiproxyContainer =
-        ToxiproxyContainer("ghcr.io/shopify/toxiproxy:latest").withNetwork(network).withExposedPorts(8474, 8666)
+    fun toxiContainer(pNetwork: Network): ToxiproxyContainer =
+        ToxiproxyContainer("ghcr.io/shopify/toxiproxy:latest").withNetwork(pNetwork).withExposedPorts(8474, 8666)
 
     @Bean
     fun proxy(toxiContainer: ToxiproxyContainer): Proxy =
         ToxiproxyClient(toxiContainer.host, toxiContainer.controlPort).createProxy("pg", "0.0.0.0:8666", "pg:5432")
 
     @Bean
-    fun properties(
+    fun pProperties(
         toxiContainer: ToxiproxyContainer,
-        pgContainer: PostgreSQLContainer,
+        pPgContainer: PostgreSQLContainer,
         proxy: Proxy, // force early proxy creation before datasource connect
     ) = DynamicPropertyRegistrar {
         it.add("spring.datasource.url") {
-            "jdbc:postgresql://${toxiContainer.host}:${toxiContainer.getMappedPort(8666)}/${pgContainer.databaseName}"
+            "jdbc:postgresql://${toxiContainer.host}:${toxiContainer.getMappedPort(8666)}/${pPgContainer.databaseName}"
         }
-        it.add("spring.datasource.username") { pgContainer.username }
-        it.add("spring.datasource.password") { pgContainer.password }
     }
 }
-
-private fun kafkaContainer(network: Network): KafkaContainer =
-    KafkaContainer(KAFKA_IMAGE).withNetwork(network).withListener("kafka:19092")
 
 private fun registryContainer(
     network: Network,
@@ -75,35 +71,35 @@ private fun registryContainer(
 
 private fun getRegistryUrl(container: GenericContainer<*>) = "http://${container.host}:${container.getMappedPort(8081)}"
 
-@Suppress("SpringJavaInjectionPointsAutowiringInspection")
-abstract class BaseKafkaTestContainer {
+private fun smallUUID() =
+    UUID
+        .randomUUID()
+        .toString()
+        .split("-")
+        .first()
+
+@TestConfiguration(proxyBeanMethods = false)
+class KafkaTestContainer {
     @Bean
-    open fun network(): Network = Network.newNetwork()
+    open fun kNetwork(): Network = Network.newNetwork()
 
     @Bean
     @ServiceConnection
-    open fun kafkaContainer(network: Network): KafkaContainer =
-        com.hamza.kafka.order
-            .kafkaContainer(network)
+    open fun kafkaContainer(kNetwork: Network): KafkaContainer =
+        KafkaContainer(KAFKA_IMAGE).withNetwork(kNetwork).withListener("kafka:19092")
 
     @Bean
     open fun registryContainer(
         kafkaContainer: KafkaContainer,
-        network: Network,
-    ): GenericContainer<*> = registryContainer(network, "PLAINTEXT://kafka:19092", kafkaContainer)
+        kNetwork: Network,
+    ): GenericContainer<*> = registryContainer(kNetwork, "PLAINTEXT://kafka:19092", kafkaContainer)
 
     @Bean
-    open fun properties(registryContainer: GenericContainer<*>): DynamicPropertyRegistrar =
+    open fun kProperties(registryContainer: GenericContainer<*>): DynamicPropertyRegistrar =
         DynamicPropertyRegistrar {
             it.add("spring.kafka.producer.properties.schema.registry.url") { getRegistryUrl(registryContainer) }
         }
 }
-
-@TestConfiguration(proxyBeanMethods = false)
-class KafkaTestContainer : BaseKafkaTestContainer()
-
-@TestConfiguration(proxyBeanMethods = false)
-class PausableKafkaTestContainer : BaseKafkaTestContainer()
 
 /*
  * Kraft cluster with 3 nodes each acting as ctrl + broker
@@ -149,7 +145,7 @@ class KafkaReplicationTestContainers {
     }
 
     @Bean
-    fun properties() =
+    fun cProperties() =
         DynamicPropertyRegistrar {
             it.add("spring.kafka.bootstrap-servers") {
                 "${broker1.bootstrapServers},${broker2.bootstrapServers},${broker3.bootstrapServers}"

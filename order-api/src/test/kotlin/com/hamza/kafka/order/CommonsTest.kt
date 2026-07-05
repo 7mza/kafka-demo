@@ -1,6 +1,6 @@
 package com.hamza.kafka.order
 
-import com.hamza.kafka.avro.OrderPlacedEvent
+import com.hamza.commons.OrderPlacedEvent
 import com.hamza.kafka.commons.createEventItem
 import com.hamza.kafka.commons.createOrderPlacedEvent
 import com.hamza.kafka.commons.fromJson

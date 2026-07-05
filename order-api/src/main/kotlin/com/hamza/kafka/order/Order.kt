@@ -1,6 +1,6 @@
 package com.hamza.kafka.order
 
-import com.hamza.kafka.avro.OrderPlacedEvent
+import com.hamza.commons.OrderPlacedEvent
 import com.hamza.kafka.commons.BaseEntity
 import com.hamza.kafka.commons.TSIDGenerator
 import com.hamza.kafka.commons.createOrderPlacedEvent
@@ -32,8 +32,8 @@ data class Item(
     @field:Positive
     var unitPriceCents: Int,
 ) {
-    fun toEventItem(): com.hamza.kafka.avro.Item =
-        com.hamza.kafka.avro.Item
+    fun toEventItem(): com.hamza.commons.Item =
+        com.hamza.commons.Item
             .newBuilder()
             .setSku(sku)
             .setQuantity(quantity)

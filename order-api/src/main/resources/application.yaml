@@ -23,13 +23,17 @@ logging:
     org.apache.kafka: warn
     org.hibernate:
       SQL: debug
+      SQL_SLOW: info
       stat: debug
     org.zalando.logbook: trace
 management:
   endpoints:
     web:
       exposure:
-        include: health,info
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: always
   health:
     livenessstate:
       enabled: true
@@ -89,7 +93,7 @@ spring:
         default_schema: ${spring.application.name}
         enable_lazy_load_no_trans: false
         format_sql: false
-        generate_statistics: true
+        generate_statistics: false
         globally_quoted_identifiers: true
         javax:
           cache:
@@ -130,7 +134,6 @@ spring:
   liquibase:
     analytics-enabled: false
     default-schema: ${spring.application.name}
-    drop-first: true
     enabled: true
   main:
     banner-mode: off
@@ -147,7 +150,6 @@ spring:
     error:
       include-exception: true
       include-message: always
-      include-stacktrace: never
 springdoc:
   api-docs:
     path: /api-docs
@@ -188,5 +190,3 @@ spring:
       enabled: false
   kafka:
     bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS}
-  liquibase:
-    drop-first: false

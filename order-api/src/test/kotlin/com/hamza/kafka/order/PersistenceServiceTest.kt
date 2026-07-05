@@ -1,6 +1,6 @@
 package com.hamza.kafka.order
 
-import com.hamza.kafka.avro.OrderPlacedEvent
+import com.hamza.commons.OrderPlacedEvent
 import com.hamza.kafka.commons.ResourceNotFoundException
 import com.hamza.kafka.commons.TSIDGenerator
 import com.hamza.kafka.commons.fromJson
@@ -9,17 +9,18 @@ import org.assertj.core.api.Assertions.within
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
+import org.mockito.kotlin.any
+import org.mockito.kotlin.doThrow
+import org.mockito.kotlin.whenever
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.context.annotation.Import
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean
 import java.time.Instant
 import java.time.temporal.ChronoUnit
 
-@SpringBootTest(
-    webEnvironment = SpringBootTest.WebEnvironment.NONE,
-    properties = ["spring.jpa.hibernate.ddl-auto=validate", "spring.liquibase.enabled=true"],
-)
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)
 @Import(PgTestContainer::class)
 class PersistenceServiceTest {
     @Autowired
@@ -28,7 +29,7 @@ class PersistenceServiceTest {
     @Autowired
     private lateinit var orderRepo: OrderRepository
 
-    @Autowired
+    @MockitoSpyBean
     private lateinit var outboxRepo: OutboxRepository
 
     @Value($$"${custom.topic_name}")
@@ -99,6 +100,14 @@ class PersistenceServiceTest {
                 }
             }
         }
+    }
+
+    @Test
+    fun `if outbox persistence fail, the whole transaction should be rolled back`() {
+        doThrow(RuntimeException("error")).whenever(outboxRepo).save(any<Outbox>())
+        assertThrows<RuntimeException> { service.save(request) }
+        assertThat(orderRepo.count()).isZero
+        assertThat(outboxRepo.count()).isZero
     }
 
     @Test

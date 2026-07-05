@@ -42,7 +42,7 @@ kafka-demo/
 ## run
 
 ```shell
-docker compose up --build
+docker compose up
 ```
 
 [order-api](http://localhost:8080/swagger-ui)
@@ -76,5 +76,5 @@ Spring is configured with [compose support](compose.dev.yaml), run with IDE
 ```shell
 ./gradlew clean ktlintFormat ktlintCheck build -PgenerateMetadata
 ./gradlew buildImage
-docker compose up --build
+docker compose up
 ```

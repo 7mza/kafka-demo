@@ -1,7 +1,7 @@
 {
   "type": "record",
   "name": "OrderPlacedEvent",
-  "namespace": "com.hamza.kafka.avro",
+  "namespace": "com.hamza.commons",
   "fields": [
     {
       "name": "eventId",

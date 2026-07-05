@@ -1,16 +1,19 @@
 package com.hamza.kafka.order
 
+import com.hamza.kafka.commons.IDrainBackOff
 import com.hamza.kafka.commons.TSIDGenerator
 import jakarta.validation.ConstraintViolationException
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
+import org.mockito.kotlin.whenever
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest
 import org.springframework.context.annotation.Import
+import org.springframework.test.context.bean.override.mockito.MockitoBean
 
-@DataJpaTest(properties = ["spring.jpa.hibernate.ddl-auto=validate", "spring.liquibase.enabled=true"])
+@DataJpaTest
 @Import(PgTestContainer::class)
 class DeadLetterRepositoryTest {
     @Autowired
@@ -18,6 +21,9 @@ class DeadLetterRepositoryTest {
 
     @Autowired
     private lateinit var repo: DeadLetterRepository
+
+    @MockitoBean
+    private lateinit var backoff: IDrainBackOff
 
     private val orders =
         listOf(
@@ -40,6 +46,7 @@ class DeadLetterRepositoryTest {
 
     @BeforeEach
     fun beforeEach() {
+        whenever(backoff.isActive()).thenReturn(true)
         outboxRepo.saveAll(orders)
     }
 

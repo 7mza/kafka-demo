@@ -1,6 +1,6 @@
 package com.hamza.kafka.order
 
-import com.hamza.kafka.avro.OrderPlacedEvent
+import com.hamza.commons.OrderPlacedEvent
 import com.hamza.kafka.commons.createEventItem
 import com.hamza.kafka.commons.createOrderPlacedEvent
 import io.confluent.kafka.serializers.AbstractKafkaSchemaSerDeConfig
@@ -14,6 +14,7 @@ import org.awaitility.Awaitility.await
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import org.junitpioneer.jupiter.RetryingTest
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.test.context.SpringBootTest
@@ -30,14 +31,13 @@ import java.util.UUID
     properties = [
         "custom.min_insync_replicas=2",
         "custom.partitions=3",
-        "custom.publish_timeout=PT1M", // loosen timeout
         "custom.replication_factor=3",
-        "custom.topic_name=replication-test",
+        "custom.topic_name=infra.test.topic",
         "spring.kafka.producer.properties.request.timeout.ms=5000",
     ],
 )
 @Import(PgTestContainer::class, KafkaReplicationTestContainers::class)
-class KafkaReplicationTest {
+class KafkaInfraTest {
     @Autowired
     private lateinit var service: IPublishService
 
@@ -97,7 +97,62 @@ class KafkaReplicationTest {
     }
 
     @Test
-    fun `publishing still succeeds and topic stays readable when one broker is down`() {
+    fun `partition - same orderId = same partition`() {
+        // gen many events with same orderId
+        val outboxes =
+            (1..15).map {
+                createOrderPlacedEvent(
+                    orderId = "order_2203",
+                    customerId = "user_220$it",
+                    items = listOf(createEventItem(sku = "sku-0$it", quantity = 1 * it, unitPriceCents = 10 * it)),
+                ).toOutbox(topicName)
+            }
+
+        // publish events to kafka
+        await().atMost(Duration.ofSeconds(30)).untilAsserted {
+            service.publish(outboxes).also { assertThat(it.publishedCount).isEqualTo(outboxes.size) }
+        }
+
+        // check events landed in same partition
+        KafkaTestUtils
+            .getRecords(consumer, Duration.ofSeconds(30))
+            .records(topicName)
+            .filter { it.value().orderId != warmupEvent.orderId }
+            .map { it.partition() }
+            .toSet()
+            .also { assertThat(it).hasSize(1) }
+    }
+
+    // N events with different keys can still land in same partition
+    @RetryingTest(maxAttempts = 3, suspendForMs = 2000)
+    fun `partition - different orderId = spread across more than 1 partition`() {
+        // gen many events with different orderId
+        val outboxes =
+            (1..15).map {
+                createOrderPlacedEvent(
+                    orderId = "order_20$it",
+                    customerId = "user_220$it",
+                    items = listOf(createEventItem(sku = "sku-0$it", quantity = 1 * it, unitPriceCents = 10 * it)),
+                ).toOutbox(topicName)
+            }
+
+        // publish events to kafka
+        await().atMost(Duration.ofSeconds(30)).untilAsserted {
+            service.publish(outboxes).also { assertThat(it.publishedCount).isEqualTo(outboxes.size) }
+        }
+
+        // check events spread across more than 1 partition
+        KafkaTestUtils
+            .getRecords(consumer, Duration.ofSeconds(30))
+            .records(topicName)
+            .filter { it.value().orderId != warmupEvent.orderId }
+            .map { it.partition() }
+            .toSet()
+            .also { assertThat(it.size).isGreaterThan(1) }
+    }
+
+    @Test
+    fun `replication - publishing still succeeds and topic stays readable when one broker is down`() {
         // get leader
         val leaderIdBefore = adminClient.getPartitionLeader(topicName = topicName, partition = 0)!!.id()
         val leaderContainer = brokersByNodeId.getValue(leaderIdBefore)

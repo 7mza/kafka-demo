@@ -1,13 +1,17 @@
 package com.hamza.kafka.order
 
+import com.hamza.kafka.commons.IDrainBackOff
 import com.hamza.kafka.commons.TSIDGenerator
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import org.mockito.kotlin.doNothing
+import org.mockito.kotlin.whenever
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.context.annotation.Import
+import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.springframework.transaction.PlatformTransactionManager
 import org.springframework.transaction.support.TransactionTemplate
 import java.time.Instant
@@ -22,6 +26,9 @@ class OutboxRepositoryTest {
 
     @Autowired
     private lateinit var txManager: PlatformTransactionManager
+
+    @MockitoBean
+    private lateinit var backoff: IDrainBackOff
 
     private val orders =
         listOf(
@@ -59,6 +66,7 @@ class OutboxRepositoryTest {
 
     @BeforeEach
     fun beforeEach() {
+        whenever(backoff.isActive()).thenReturn(true)
         repo.saveAll(orders)
     }
 
