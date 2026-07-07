@@ -8,30 +8,45 @@ queue KAFKA as K
 loop
     note across: N concurrent listener: **1 per partition**
     SERVICE --> K: listen
-    K --> SERVICE: consume events
-    note across: check idempotency: **only processed once**
-    alt never processed before
-        group transactional
-            SERVICE --> SERVICE: process order
-            note right: for demo: randomly accept or reject order\n(accepted/rejected topics)
-            SERVICE --> DB: save event as processed
-            SERVICE --> SERVICE: create outbox
-            SERVICE --> DB: save outbox
+    K --> SERVICE: consume event
+    group transactional
+        note across: idempotency check: **only consumed once**
+        SERVICE --> DB: dedup by eventId
+        DB --> SERVICE: response
+        alt never consumed before
+            SERVICE --> SERVICE: create inbox
+            SERVICE --> DB: save inbox
+            SERVICE --> K: ACK
+            note right: commit read offset\nif it fails idempotency check will ignore it
+        else already consumed
+            SERVICE --> K: ACK
+            note right: commit read offset\nif it fails idempotency check will ignore it
         end
-    else already processed
-        SERVICE --> SERVICE: skip
     end
-    SERVICE --> K: ACK
-    note right: commit read offset\nif it fails idempotency check will ignore it
 end
 
-group listener on DB `outbox_channel`
-    note across: same flow as ORDER_API
+group listener on DB `inbox_channel`
     SERVICE <--> DB: listen/notify
+    note left: manual CDC
+    note right: trigger on insert that notify **inbox_channel**
+    SERVICE --> SERVICE: trigger process service
+    loop until no unprocessed inbox is retrieved
+        note across: keep processing unprocessed inbox messages until none is left then sleeps
+        group transactional
+            note across: transaction here to lock current batch in DB in case of concurrency\nany concurrent will pick next batch
+            SERVICE --> DB : get unprocessed inbox batch
+            note right: **processedAt == null**\nwill lock current batch in DB in case of concurrency\nany concurrent will pick next batch
+            DB --> SERVICE : inbox batch
+            SERVICE --> SERVICE : process batch
+            note right: **business logic here**\nfor demo: randomly accept or reject order\n(accepted/rejected status)
+            SERVICE --> DB : flag batch as processed
+            note right: set processedAt
+        end
+    end
 end
 
 group low freq rescue periodic poll
-    note across: rescue in case listener fails or back off kicks in
-    SERVICE --> SERVICE: trigger drain service
+    note across: rescue in case listener fails
+    SERVICE --> SERVICE: trigger process service
 end
 @enduml

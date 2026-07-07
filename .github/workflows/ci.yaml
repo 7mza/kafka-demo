@@ -51,7 +51,9 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        service: [order-api]
+        service:
+          - order-api
+          - inventory-service
     steps:
       - uses: actions/checkout@v7
 

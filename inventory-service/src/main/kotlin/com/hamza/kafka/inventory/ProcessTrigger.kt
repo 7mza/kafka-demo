@@ -1,6 +1,5 @@
-package com.hamza.kafka.order
+package com.hamza.kafka.inventory
 
-import com.hamza.kafka.commons.IDrainBackOff
 import com.hamza.kafka.commons.ITrigger
 import org.slf4j.LoggerFactory
 import org.springframework.scheduling.annotation.Async
@@ -8,9 +7,8 @@ import org.springframework.stereotype.Service
 import java.util.concurrent.Semaphore
 
 @Service
-class DrainTrigger(
-    private val service: IDrainService,
-    private val backOff: IDrainBackOff,
+class ProcessTrigger(
+    private val service: IProcessService<Inbox>,
 ) : ITrigger {
     private val logger = LoggerFactory.getLogger(javaClass)
     private val semaphore = Semaphore(1)
@@ -18,18 +16,11 @@ class DrainTrigger(
     @Async
     override fun trigger() {
         if (!semaphore.tryAcquire()) {
-            logger.info("DrainService already running")
+            logger.info("ProcessService already running")
             return
         }
         try {
-            while (true) {
-                if (backOff.isActive()) {
-                    logger.info("BackOff cooldown is active")
-                    break
-                }
-                val result = service.drain() ?: break
-                backOff.observe(result)
-            }
+            while (service.process().isNotEmpty()) { /* keep processing */ }
         } finally {
             semaphore.release()
         }

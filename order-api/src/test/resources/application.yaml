@@ -97,6 +97,9 @@ spring:
       properties:
         enable:
           idempotence: false
+        max:
+          block:
+            ms: 5000
         metadata:
           max:
             age:

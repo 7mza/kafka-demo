@@ -12,11 +12,11 @@ interface IDrainService {
 @Service
 class DrainService(
     private val repo: OutboxRepository,
-    private val service: IPublishService,
+    private val service: IPublishService<Outbox>,
     @Value($$"${custom.batch_size}") private val batchSize: Int,
     @Value($$"${custom.max_attempts}") private val maxAttempts: Int,
 ) : IDrainService {
-    @Transactional
+    @Transactional // trx required for `for update skip locked`
     override fun drain(): KafkaPublishResult? {
         val batch = repo.retrieveUnpublished(batchSize, maxAttempts)
         if (batch.isEmpty()) return null

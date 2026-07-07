@@ -58,7 +58,6 @@ subprojects {
     plugins.apply("org.springframework.boot")
     plugins.apply("org.hibernate.orm")
 
-    val junitPioneerVersion = "2.3.0"
     val mockitoCoreVersion = "5.23.0"
     val mockitoKotlinVersion = "6.3.0"
 
@@ -73,7 +72,6 @@ subprojects {
         mockitoAgent("org.mockito:mockito-core:$mockitoCoreVersion") { isTransitive = false }
 
         testImplementation("org.jetbrains.kotlin:kotlin-test-junit5")
-        testImplementation("org.junit-pioneer:junit-pioneer:$junitPioneerVersion")
         testImplementation("org.mockito.kotlin:mockito-kotlin:$mockitoKotlinVersion")
 
         testRuntimeOnly("org.junit.platform:junit-platform-launcher")

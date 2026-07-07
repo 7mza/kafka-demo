@@ -1,13 +1,10 @@
 # test YAML should mirror main YAML as much as possible for GraalVM tracing agent to intercept everything
 # general exceptions to this rule are testcontainers service connections
-logbook:
-  format:
-    style: http
-  predicate:
-    exclude:
-      - path: /actuator/**
-      - path: /api-docs/**
-      - path: /swagger-ui/**
+custom:
+  batch_size: 10
+  poll_delay: PT24H
+  poll_initial_delay: PT24H
+  topic_name: test.topic
 logging:
   include-application-name: false
   level:
@@ -120,14 +117,3 @@ spring:
     error:
       include-exception: true
       include-message: always
-springdoc:
-  api-docs:
-    path: /api-docs
-  packagesToScan: com.hamza
-  pathsToMatch: /**
-  swagger-ui:
-    disable-swagger-default-url: true
-    doc-expansion: none
-    operationsSorter: method
-    path: /swagger-ui
-    tagsSorter: alpha

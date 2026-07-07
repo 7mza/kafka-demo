@@ -9,15 +9,11 @@
     </resources>
   </cache-template>
   <cache
-    alias="orders"
-    uses-template="short" />
-  <cache
-    alias="orders_outbox"
+    alias="orders_inbox"
     uses-template="short" />
   <cache
     alias="default-query-results-region"
     uses-template="short" />
-  <!-- -->
   <cache-template name="long">
     <expiry>
       <none />

@@ -59,7 +59,7 @@ internal fun AdminClient.assertNodes(
 }
 
 // warm up avro schema registration while cluster is healthy
-internal fun IPublishService.warmupSchemaRegistry(topicName: String) {
+internal fun IPublishService<Outbox>.warmupSchemaRegistry(topicName: String) {
     await().atMost(Duration.ofSeconds(30)).untilAsserted {
         this.publish(listOf(warmupEvent.toOutbox(topicName))).also { assertThat(it.publishedCount).isOne }
     }

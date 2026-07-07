@@ -1,5 +1,7 @@
-package com.hamza.kafka.order
+package com.hamza.kafka.inventory
 
+import com.hamza.kafka.commons.ITrigger
+import com.hamza.kafka.commons.TSIDGenerator
 import eu.rekawek.toxiproxy.Proxy
 import org.awaitility.Awaitility.await
 import org.junit.jupiter.api.AfterEach
@@ -11,32 +13,27 @@ import org.mockito.kotlin.verify
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.context.annotation.Import
+import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean
 import java.time.Duration
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)
 @Import(ProxiedPgTestContainer::class)
-class OutboxInsertionListenerTest {
+class CDCListenerTest {
     @Autowired
-    private lateinit var orderRepo: OrderRepository
-
-    @Autowired
-    private lateinit var outboxRepo: OutboxRepository
-
-    @Autowired
-    private lateinit var persistenceService: IPersistenceService
-
-    @MockitoSpyBean
-    private lateinit var trigger: IDrainTrigger
+    private lateinit var repo: InboxRepository
 
     @Autowired
     private lateinit var proxy: Proxy
 
-    private val request =
-        OrderPostDto(
-            customerId = "user-2203",
-            items = listOf(ItemDto(sku = "sku-01", quantity = 10, unitPriceCents = 199)),
-        )
+    @MockitoSpyBean
+    private lateinit var trigger: ITrigger
+
+    @MockitoBean
+    private lateinit var service: IProcessService<Inbox>
+
+    private val inbox =
+        Inbox(orderId = TSIDGenerator.next(), eventType = "eventType", payload = "{}")
 
     @BeforeEach
     fun beforeEach() {
@@ -45,14 +42,13 @@ class OutboxInsertionListenerTest {
 
     @AfterEach
     fun afterEach() {
-        orderRepo.deleteAll()
-        outboxRepo.deleteAll()
+        repo.deleteAll()
     }
 
     @Test
     fun `trigger fires again after PG is killed and resumed`() {
-        persistenceService.save(request)
-        await().atMost(Duration.ofSeconds(5)).untilAsserted {
+        repo.save(inbox)
+        await().atMost(Duration.ofSeconds(30)).untilAsserted {
             verify(trigger, times(1)).trigger()
         }
 
@@ -60,8 +56,8 @@ class OutboxInsertionListenerTest {
         Thread.sleep(Duration.ofSeconds(6).toMillis())
         proxy.enable()
 
-        persistenceService.save(request)
-        await().atMost(Duration.ofSeconds(15)).untilAsserted {
+        repo.save(inbox.apply { id = TSIDGenerator.next() })
+        await().atMost(Duration.ofSeconds(30)).untilAsserted {
             verify(trigger, times(2)).trigger()
         }
     }

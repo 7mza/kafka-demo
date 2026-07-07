@@ -8,7 +8,7 @@ event-driven pipeline demo
 - Avro schema / registry
 - CDC
 - transactional outbox write
-- idempotent read
+- idempotent transactional inbox read
 - backoff / retry / rescue
 - dead lettering
 - GraalVM
@@ -47,9 +47,23 @@ docker compose up
 
 [order-api](http://localhost:8080/swagger-ui)
 
-[inventory-service](http://localhost:8081/swagger-ui)
-
 [Kafbat UI](http://localhost:9090)
+
+## load test
+
+```shell
+# https://github.com/hatoo/oha
+
+oha -n 5000 -c 500 --redirect 0 \
+  -m POST \
+  -H 'accept: application/json' \
+  -H 'Content-Type: application/json' \
+  -d '{"customerId":"user_2203","items":[{"sku":"sku-01","quantity":10,"unitPriceCents":199}]}' \
+  http://localhost:8080/api/order
+
+# -n total request
+# -c concurrent connection
+```
 
 ## build
 

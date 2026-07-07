@@ -1,13 +1,12 @@
 package com.hamza.kafka.order
 
-import com.hamza.kafka.commons.IDrainBackOff
+import com.hamza.kafka.commons.ICDCListener
 import com.hamza.kafka.commons.TSIDGenerator
 import jakarta.validation.ConstraintViolationException
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
-import org.mockito.kotlin.whenever
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest
 import org.springframework.context.annotation.Import
@@ -23,30 +22,26 @@ class DeadLetterRepositoryTest {
     private lateinit var repo: DeadLetterRepository
 
     @MockitoBean
-    private lateinit var backoff: IDrainBackOff
+    private lateinit var listener: ICDCListener
 
     private val orders =
         listOf(
             Outbox(
-                id = TSIDGenerator.next(),
                 orderId = TSIDGenerator.next(),
                 eventType = "event1",
                 topic = "topic",
                 payload = "{}",
             ),
             Outbox(
-                id = TSIDGenerator.next(),
                 orderId = TSIDGenerator.next(),
                 eventType = "event2",
                 topic = "topic",
                 payload = "{}",
-                lastError = "error1",
-            ),
+            ).apply { lastError = "error1" },
         )
 
     @BeforeEach
     fun beforeEach() {
-        whenever(backoff.isActive()).thenReturn(true)
         outboxRepo.saveAll(orders)
     }
 
@@ -62,13 +57,11 @@ class DeadLetterRepositoryTest {
     fun `outbox row not respecting lastError validation pattern should be rejected with an error`() {
         val invalid =
             Outbox(
-                id = TSIDGenerator.next(),
                 orderId = TSIDGenerator.next(),
                 eventType = "event3",
                 topic = "topic",
                 payload = "{}",
-                lastError = " ",
-            )
+            ).apply { lastError = " " }
         assertThrows<ConstraintViolationException> { outboxRepo.saveAndFlush(invalid) }
     }
 }

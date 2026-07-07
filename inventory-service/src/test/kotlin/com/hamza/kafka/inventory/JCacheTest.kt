@@ -1,5 +1,6 @@
-package com.hamza.kafka.order
+package com.hamza.kafka.inventory
 
+import com.hamza.kafka.commons.ICDCListener
 import jakarta.persistence.EntityManagerFactory
 import org.assertj.core.api.Assertions.assertThat
 import org.hibernate.SessionFactory
@@ -10,21 +11,30 @@ import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.context.annotation.Import
+import org.springframework.test.context.bean.override.mockito.MockitoBean
 
 // for GraalVM tracing-agent to intercept jcache caching + invalidation
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)
 @Import(PgTestContainer::class)
 class JCacheTest {
     @Autowired
-    private lateinit var repo: OrderRepository
+    private lateinit var repo: InboxRepository
 
     @Autowired
     private lateinit var entityManagerFactory: EntityManagerFactory
 
+    @MockitoBean
+    private lateinit var listener: ICDCListener
+
     private lateinit var statistics: Statistics
 
-    private val order =
-        Order(customerId = "user-2203", items = listOf(Item(sku = "sku-01", quantity = 10, unitPriceCents = 199)))
+    private val inbox =
+        Inbox(
+            orderId = "0qsbs74grkjq3",
+            eventType = "eventType",
+            payload = "{}".trimIndent(),
+            status = Status.entries.random(),
+        )
 
     @BeforeEach
     fun beforeEach() {
@@ -48,7 +58,7 @@ class JCacheTest {
     @Test
     fun `L2 cache should be set immediately on write and don't read from db after`() {
         // write + read
-        val id = repo.saveAndFlush(order).id
+        val id = repo.saveAndFlush(inbox).id
 
         statistics.also {
             // 2 calls to db
@@ -75,7 +85,7 @@ class JCacheTest {
     @Test
     fun `L2 cache invalidation`() {
         // write + read
-        val id = repo.saveAndFlush(order).id
+        val id = repo.saveAndFlush(inbox).id
 
         statistics.also {
             // 2 calls to db
@@ -87,7 +97,7 @@ class JCacheTest {
         }
 
         // cache invalidation
-        entityManagerFactory.unwrap(SessionFactory::class.java).cache.evict(Order::class.java, id)
+        entityManagerFactory.unwrap(SessionFactory::class.java).cache.evict(Inbox::class.java, id)
 
         // 2nd read
         repo.findById(id)
@@ -105,7 +115,7 @@ class JCacheTest {
     @Test
     fun `deleting a cached entity invalidates the L2 cache entry`() {
         // write + read
-        val id = repo.saveAndFlush(order).id
+        val id = repo.saveAndFlush(inbox).id
 
         statistics.also {
             // 2 calls to db
@@ -132,7 +142,7 @@ class JCacheTest {
     @Test
     fun `updating a cached entity replaces it in place, it does not evict it`() {
         // write + read
-        val id = repo.saveAndFlush(order).id
+        val id = repo.saveAndFlush(inbox).id
 
         statistics.also {
             // 2 calls to db
@@ -149,13 +159,13 @@ class JCacheTest {
         // how many cache miss before update
         val missesBeforeUpdate = statistics.secondLevelCacheMissCount
 
-        order.customerId = "user-2203"
-        repo.saveAndFlush(order)
+        inbox.orderId = "0qsbs74grkjq4"
+        repo.saveAndFlush(inbox)
 
         // still served from L2 / replaced in place
         repo.findById(id).also {
             assertThat(it).isPresent
-            assertThat(it.get().customerId).isEqualTo("user-2203")
+            assertThat(it.get().orderId).isEqualTo("0qsbs74grkjq4")
         }
 
         // no new cache miss

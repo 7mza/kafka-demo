@@ -2,7 +2,6 @@ package com.hamza.kafka.order
 
 import com.hamza.commons.OrderPlacedEvent
 import com.hamza.kafka.commons.BaseEntity
-import com.hamza.kafka.commons.TSIDGenerator
 import com.hamza.kafka.commons.createOrderPlacedEvent
 import jakarta.persistence.Cacheable
 import jakarta.persistence.Column
@@ -48,8 +47,6 @@ data class Item(
 @Cacheable
 @Cache(usage = CacheConcurrencyStrategy.READ_WRITE, region = "orders")
 class Order(
-    id: String = TSIDGenerator.next(),
-    //
     @field:Column(nullable = false, length = 13)
     @field:NotBlank
     @field:Size(max = 13)
@@ -60,7 +57,7 @@ class Order(
     @field:Valid // FIXME: deprecated
     @field:NotEmpty
     var items: List<@Valid Item>,
-) : BaseEntity(id) {
+) : BaseEntity() {
     fun toOrderPlacedEvent(): OrderPlacedEvent =
         createOrderPlacedEvent(
             orderId = this.id,

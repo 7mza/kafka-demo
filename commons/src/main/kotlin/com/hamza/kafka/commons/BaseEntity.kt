@@ -9,6 +9,7 @@ import jakarta.validation.constraints.Size
 import org.hibernate.annotations.ColumnDefault
 import org.hibernate.annotations.CreationTimestamp
 import org.hibernate.annotations.UpdateTimestamp
+import tools.jackson.databind.ObjectMapper
 import java.time.Instant
 
 @MappedSuperclass
@@ -16,7 +17,7 @@ abstract class BaseEntity(
     @field:Id
     @field:Column(length = 13)
     @field:Size(min = 13, max = 13)
-    var id: String,
+    var id: String = TSIDGenerator.next(),
     //
     @field:Column(nullable = false)
     @field:CreationTimestamp
@@ -36,4 +37,6 @@ abstract class BaseEntity(
         this === other || (other is BaseEntity && other::class == this::class && this.id == other.id)
 
     override fun hashCode() = this.id.hashCode()
+
+    fun toJson(objectMapper: ObjectMapper) = writeJson(this, objectMapper)
 }

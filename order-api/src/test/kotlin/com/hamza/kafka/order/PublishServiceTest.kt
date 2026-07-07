@@ -30,7 +30,7 @@ import java.util.UUID
 @Import(PgTestContainer::class, KafkaTestContainer::class)
 class PublishServiceTest {
     @Autowired
-    private lateinit var service: IPublishService
+    private lateinit var service: IPublishService<Outbox>
 
     @Value($$"${custom.topic_name}")
     private lateinit var topicName: String

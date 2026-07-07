@@ -17,7 +17,6 @@
   <cache
     alias="default-query-results-region"
     uses-template="short" />
-  <!-- -->
   <cache-template name="long">
     <expiry>
       <none />

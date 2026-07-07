@@ -1,6 +1,7 @@
 package com.hamza.kafka.order
 
 import com.hamza.commons.OrderPlacedEvent
+import com.hamza.kafka.commons.ICDCListener
 import com.hamza.kafka.commons.ResourceNotFoundException
 import com.hamza.kafka.commons.TSIDGenerator
 import com.hamza.kafka.commons.fromJson
@@ -16,6 +17,7 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.context.annotation.Import
+import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean
 import java.time.Instant
 import java.time.temporal.ChronoUnit
@@ -31,6 +33,9 @@ class PersistenceServiceTest {
 
     @MockitoSpyBean
     private lateinit var outboxRepo: OutboxRepository
+
+    @MockitoBean
+    private lateinit var listener: ICDCListener
 
     @Value($$"${custom.topic_name}")
     private lateinit var topicName: String
@@ -138,22 +143,20 @@ class PersistenceServiceTest {
         val orders =
             listOf(
                 Outbox(
-                    id = TSIDGenerator.next(),
                     orderId = TSIDGenerator.next(),
                     eventType = "event1",
                     topic = "topic",
                     payload = "{}",
-                    publishedAt = Instant.now(),
-                ),
+                ).apply { publishedAt = Instant.now() },
                 Outbox(
-                    id = TSIDGenerator.next(),
                     orderId = TSIDGenerator.next(),
                     eventType = "event2",
                     topic = "topic",
                     payload = "{}",
-                    attempts = 10,
-                    lastError = "toto",
-                ),
+                ).apply {
+                    attempts = 10
+                    lastError = "toto"
+                },
             )
 
         outboxRepo.saveAll(orders)

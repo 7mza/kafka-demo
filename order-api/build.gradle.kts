@@ -22,7 +22,6 @@ dependencies {
     implementation("net.lbruun.springboot:preliquibase-spring-boot-starter:$preLiquibaseVersion")
     implementation("org.ehcache:ehcache::jakarta")
     implementation("org.hibernate.orm:hibernate-jcache")
-    implementation("org.postgresql:postgresql")
     implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:$openapiVersion")
     implementation("org.springframework.boot:spring-boot-starter-actuator")
     implementation("org.springframework.boot:spring-boot-starter-data-jpa")
@@ -33,6 +32,8 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-webmvc")
     implementation("org.zalando:logbook-spring-boot-starter:$logbookSpringVersion")
     implementation(project(":commons"))
+
+    runtimeOnly("org.postgresql:postgresql")
 
     testImplementation("org.springframework.boot:spring-boot-starter-data-jpa-test")
     testImplementation("org.springframework.boot:spring-boot-starter-kafka-test")

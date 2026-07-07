@@ -1,4 +1,4 @@
-package com.hamza.kafka.order
+package com.hamza.kafka.inventory
 
 import com.hamza.commons.OrderPlacedEvent
 import com.hamza.kafka.commons.createEventItem
@@ -20,18 +20,26 @@ class CommonsTest {
     @Autowired
     private lateinit var objectMapper: ObjectMapper
 
-    private val orderJson =
+    private val inboxJson =
         """
-{"id":"0qsbs74grkjq2","customerId":"user_2203","createdAt":"2026-06-23T11:44:28Z","items":[{"sku":"sku-01","quantity":10,"unitPriceCents":199}]}
+{"orderId":"order_2203","eventType":"eventType","payload":"{\"id\":\"0qsbs74grkjq2\",\"customerId\":\"user_2203\",\"createdAt\":\"2026-06-23T11:44:28Z\",\"items\":[{\"sku\":\"sku-01\",\"quantity\":10,\"unitPriceCents\":199}]}","status":"ACCEPTED","createdAt":"2026-01-01T00:00:00Z","id":"0qsbs74grkjq2","processedAt":"2026-01-01T00:00:00Z","updatedAt":"2026-01-01T00:00:00Z","version":0}
         """.trimIndent()
 
-    private val order =
-        OrderGetDto(
-            id = "0qsbs74grkjq2",
-            customerId = "user_2203",
-            createdAt = "2026-06-23T11:44:28Z",
-            items = listOf(ItemDto(sku = "sku-01", quantity = 10, unitPriceCents = 199)),
-        )
+    private val inbox =
+        Inbox(
+            orderId = "order_2203",
+            eventType = "eventType",
+            payload =
+                """
+{"id":"0qsbs74grkjq2","customerId":"user_2203","createdAt":"2026-06-23T11:44:28Z","items":[{"sku":"sku-01","quantity":10,"unitPriceCents":199}]}
+                """.trimIndent(),
+            status = Status.ACCEPTED,
+        ).apply {
+            id = "0qsbs74grkjq2"
+            processedAt = Instant.parse("2026-01-01T00:00:00Z")
+            createdAt = Instant.parse("2026-01-01T00:00:00Z")
+            updatedAt = Instant.parse("2026-01-01T00:00:00Z")
+        }
 
     private val eventJson =
         """
@@ -49,12 +57,12 @@ class CommonsTest {
 
     @Test
     fun `parseJson should transform a json string to it's original object using jackson`() {
-        parseJson<OrderGetDto>(orderJson, objectMapper).also { assertThat(it).isEqualTo(order) }
+        parseJson<Inbox>(inboxJson, objectMapper).also { assertThat(it).isEqualTo(inbox) }
     }
 
     @Test
     fun `writeJson should transform an object to json string using jackson`() {
-        writeJson(order, objectMapper).also { assertThat(it).isEqualTo(orderJson) }
+        writeJson(inbox, objectMapper).also { assertThat(it).isEqualTo(inboxJson) }
     }
 
     @Test

@@ -126,6 +126,9 @@ spring:
       properties:
         enable:
           idempotence: false
+        max:
+          block:
+            ms: 5000
         schema:
           registry:
             url: http://${custom.registry.host:localhost}:9091

@@ -1,11 +1,8 @@
-logbook:
-  format:
-    style: http
-  predicate:
-    exclude:
-      - path: /actuator/**
-      - path: /api-docs/**
-      - path: /swagger-ui/**
+custom:
+  batch_size: 10
+  poll_delay: PT1M
+  poll_initial_delay: PT1M
+  topic_name: orders.placed
 logging:
   include-application-name: false
   level:
@@ -15,7 +12,6 @@ logging:
       SQL: debug
       SQL_SLOW: info
       stat: debug
-    org.zalando.logbook: trace
 management:
   endpoints:
     web:
@@ -149,23 +145,16 @@ spring:
     error:
       include-exception: true
       include-message: always
-springdoc:
-  api-docs:
-    path: /api-docs
-  packagesToScan: com.hamza
-  pathsToMatch: /**
-  swagger-ui:
-    disable-swagger-default-url: true
-    doc-expansion: none
-    operationsSorter: method
-    path: /swagger-ui
-    tagsSorter: alpha
 ---
 custom:
+  batch_size: ${INVENTORY_BATCH_SIZE}
   pg:
     host: postgres
+  poll_delay: ${INVENTORY_POLL_DELAY}
+  poll_initial_delay: ${INVENTORY_POLL_INITIAL_DELAY}
   registry:
     host: schema-registry
+  topic_name: ${ORDERS_TOPIC_NAME}
 logging:
   level:
     org.apache.kafka: ${KAFKA_LOGGING_LEVEL:warn}

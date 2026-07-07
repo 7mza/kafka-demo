@@ -37,7 +37,7 @@ import java.util.UUID
 @Import(PgTestContainer::class, KafkaReplicationTestContainers::class)
 class KafkaInfraMinIsrTest {
     @Autowired
-    private lateinit var service: IPublishService
+    private lateinit var service: IPublishService<Outbox>
 
     @Value($$"${custom.topic_name}")
     private lateinit var topicName: String

@@ -10,39 +10,29 @@ import org.hibernate.annotations.Cache
 import org.hibernate.annotations.CacheConcurrencyStrategy
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.data.jpa.repository.Query
-import java.time.Instant
 
 fun OrderPlacedEvent.toOutbox(topicName: String) =
     Outbox(
-        id = this.eventId,
         orderId = this.orderId,
         eventType = this.schema.name,
         topic = topicName,
         payload = this.toJson(),
-    )
+    ).apply { id = eventId }
 
 @Entity
 @Table(name = "orders_outbox")
 @Cacheable
 @Cache(usage = CacheConcurrencyStrategy.READ_WRITE, region = "orders_outbox")
 class Outbox(
-    id: String,
     orderId: String,
     eventType: String,
     topic: String,
     payload: String,
-    publishedAt: Instant? = null,
-    attempts: Int = 0,
-    lastError: String? = null,
 ) : BaseOutbox(
-        id = id,
         orderId = orderId,
         eventType = eventType,
         topic = topic,
         payload = payload,
-        publishedAt = publishedAt,
-        attempts = attempts,
-        lastError = lastError,
     ) {
     fun toDto() =
         OrderOutboxDto(

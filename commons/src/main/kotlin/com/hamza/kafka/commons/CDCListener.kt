@@ -1,28 +1,30 @@
-package com.hamza.kafka.order
+package com.hamza.kafka.commons
 
 import org.postgresql.PGConnection
 import org.slf4j.LoggerFactory
+import org.springframework.aop.support.AopUtils
 import org.springframework.boot.context.event.ApplicationReadyEvent
 import org.springframework.context.ApplicationListener
-import org.springframework.stereotype.Component
 import java.time.Duration.ofSeconds
 import javax.sql.DataSource
 
-interface IOutboxListener : ApplicationListener<ApplicationReadyEvent> {
+interface ICDCListener : ApplicationListener<ApplicationReadyEvent> {
     override fun onApplicationEvent(event: ApplicationReadyEvent)
 
     fun listen()
 }
 
-@Component
-class OutboxListener(
+class CDCListener(
+    private val name: String,
+    private val channel: String,
     private val dataSource: DataSource,
-    private val trigger: IDrainTrigger,
-) : IOutboxListener {
+    private val trigger: ITrigger,
+) : ICDCListener {
     private val logger = LoggerFactory.getLogger(javaClass)
+    private val triggerName = AopUtils.getTargetClass(trigger).simpleName
 
     override fun onApplicationEvent(event: ApplicationReadyEvent) {
-        Thread.ofVirtual().name("outbox-listener").start(::listen)
+        Thread.ofVirtual().name("$name-listener").start(::listen)
     }
 
     override fun listen() {
@@ -30,12 +32,12 @@ class OutboxListener(
             try {
                 dataSource.connection.use {
                     val pgConn = it.unwrap(PGConnection::class.java)
-                    it.createStatement().use { stm -> stm.execute("LISTEN outbox_channel") }
-                    logger.info("Listening to DB events on channel: outbox_channel")
+                    it.createStatement().use { stm -> stm.execute("LISTEN $channel") }
+                    logger.info("Listening to DB events on channel $channel")
                     while (!Thread.currentThread().isInterrupted) {
                         val notifications = pgConn.getNotifications(10_000)
                         if (!notifications.isNullOrEmpty()) {
-                            logger.info("Received {} notifications, triggering DrainService", notifications.size)
+                            logger.info("Received {} notifications, triggering {}", notifications.size, triggerName)
                             trigger.trigger()
                         }
                     }

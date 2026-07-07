@@ -11,8 +11,6 @@ group = "com.hamza.kafka.inventory"
 version = "0.0.1"
 
 val avroSerializerVersion = "8.3.0"
-val logbookSpringVersion = "4.0.4"
-val openapiVersion = "3.0.3"
 val preLiquibaseVersion = "2.0.0"
 
 dependencies {
@@ -22,17 +20,15 @@ dependencies {
     implementation("net.lbruun.springboot:preliquibase-spring-boot-starter:$preLiquibaseVersion")
     implementation("org.ehcache:ehcache::jakarta")
     implementation("org.hibernate.orm:hibernate-jcache")
-    implementation("org.postgresql:postgresql")
-    implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:$openapiVersion")
     implementation("org.springframework.boot:spring-boot-starter-actuator")
     implementation("org.springframework.boot:spring-boot-starter-data-jpa")
     implementation("org.springframework.boot:spring-boot-starter-kafka")
     implementation("org.springframework.boot:spring-boot-starter-liquibase")
-    implementation("org.springframework.boot:spring-boot-starter-restclient")
     implementation("org.springframework.boot:spring-boot-starter-validation")
     implementation("org.springframework.boot:spring-boot-starter-webmvc")
-    implementation("org.zalando:logbook-spring-boot-starter:$logbookSpringVersion")
     implementation(project(":commons"))
+
+    runtimeOnly("org.postgresql:postgresql")
 
     testImplementation("org.springframework.boot:spring-boot-starter-data-jpa-test")
     testImplementation("org.springframework.boot:spring-boot-starter-kafka-test")
@@ -70,7 +66,6 @@ tasks {
     withType<ProcessTestAot>().configureEach { jvmArgs("-XX:+EnableDynamicAgentLoading") }
 
     register<Exec>("buildImage") {
-        enabled = false // FIXME: enable when ready
         description = "build image using buildx"
         group = "publishing"
         workingDir(rootDir)

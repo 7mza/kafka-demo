@@ -10,6 +10,7 @@ val hypersistenceTsidVersion = "2.1.4"
 dependencies {
     api("org.apache.avro:avro:$avroVersion")
 
+    compileOnly("org.postgresql:postgresql")
     compileOnly("org.springframework.boot:spring-boot-starter-data-jpa")
     compileOnly("org.springframework.boot:spring-boot-starter-validation")
     compileOnly("org.springframework:spring-web")

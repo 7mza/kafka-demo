@@ -1,7 +1,12 @@
 package com.hamza.kafka.order
 
+import com.hamza.kafka.commons.CDCListener
 import com.hamza.kafka.commons.DrainBackOff
+import com.hamza.kafka.commons.ICDCListener
 import com.hamza.kafka.commons.IDrainBackOff
+import com.hamza.kafka.commons.IPollService
+import com.hamza.kafka.commons.ITrigger
+import com.hamza.kafka.commons.PollService
 import io.swagger.v3.oas.models.OpenAPI
 import io.swagger.v3.oas.models.info.Info
 import org.slf4j.LoggerFactory
@@ -20,6 +25,7 @@ import org.springframework.kafka.config.TopicBuilder
 import org.springframework.scheduling.annotation.EnableScheduling
 import org.zalando.logbook.spring.LogbookClientHttpRequestInterceptor
 import java.net.InetAddress
+import javax.sql.DataSource
 
 @Configuration
 @EnableScheduling
@@ -66,4 +72,14 @@ class Configurations(
 
     @Bean
     fun drainBackOff(): IDrainBackOff = DrainBackOff()
+
+    @Bean
+    fun cdcListener(
+        dataSource: DataSource,
+        trigger: ITrigger,
+    ): ICDCListener =
+        CDCListener(name = "outbox", channel = "outbox_channel", dataSource = dataSource, trigger = trigger)
+
+    @Bean
+    fun pollService(trigger: ITrigger): IPollService = PollService(trigger)
 }

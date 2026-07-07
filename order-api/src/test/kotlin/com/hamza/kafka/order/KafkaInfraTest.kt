@@ -1,6 +1,7 @@
 package com.hamza.kafka.order
 
 import com.hamza.commons.OrderPlacedEvent
+import com.hamza.kafka.commons.TSIDGenerator
 import com.hamza.kafka.commons.createEventItem
 import com.hamza.kafka.commons.createOrderPlacedEvent
 import io.confluent.kafka.serializers.AbstractKafkaSchemaSerDeConfig
@@ -14,7 +15,6 @@ import org.awaitility.Awaitility.await
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import org.junitpioneer.jupiter.RetryingTest
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.test.context.SpringBootTest
@@ -39,7 +39,7 @@ import java.util.UUID
 @Import(PgTestContainer::class, KafkaReplicationTestContainers::class)
 class KafkaInfraTest {
     @Autowired
-    private lateinit var service: IPublishService
+    private lateinit var service: IPublishService<Outbox>
 
     @Value($$"${custom.topic_name}")
     private lateinit var topicName: String
@@ -114,8 +114,9 @@ class KafkaInfraTest {
         }
 
         // check events landed in same partition
+        // minRecords = published + warmup
         KafkaTestUtils
-            .getRecords(consumer, Duration.ofSeconds(30))
+            .getRecords(consumer, Duration.ofSeconds(30), outboxes.size + 1)
             .records(topicName)
             .filter { it.value().orderId != warmupEvent.orderId }
             .map { it.partition() }
@@ -123,14 +124,13 @@ class KafkaInfraTest {
             .also { assertThat(it).hasSize(1) }
     }
 
-    // N events with different keys can still land in same partition
-    @RetryingTest(maxAttempts = 3, suspendForMs = 2000)
+    @Test
     fun `partition - different orderId = spread across more than 1 partition`() {
         // gen many events with different orderId
         val outboxes =
             (1..15).map {
                 createOrderPlacedEvent(
-                    orderId = "order_20$it",
+                    orderId = TSIDGenerator.next(),
                     customerId = "user_220$it",
                     items = listOf(createEventItem(sku = "sku-0$it", quantity = 1 * it, unitPriceCents = 10 * it)),
                 ).toOutbox(topicName)
@@ -142,8 +142,9 @@ class KafkaInfraTest {
         }
 
         // check events spread across more than 1 partition
+        // minRecords = published + warmup
         KafkaTestUtils
-            .getRecords(consumer, Duration.ofSeconds(30))
+            .getRecords(consumer, Duration.ofSeconds(30), outboxes.size + 1)
             .records(topicName)
             .filter { it.value().orderId != warmupEvent.orderId }
             .map { it.partition() }

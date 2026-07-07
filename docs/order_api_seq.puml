@@ -22,41 +22,49 @@ group listener on DB `outbox_channel`
     note right: trigger on insert that notify **outbox_channel**
     API --> API: trigger drain service
     loop until no unpublished outbox is retrieved
-        note across: **drain service**:\nkeep draining unpublished outboxes until none is left then sleeps\nis gated by a linear back off in case kafka is unhealthy
-        API --> DB : get unpublished outbox batch
-        note right: **publishedAt == null AND attempts < max_attempts**\nwill lock current batch in DB in case of concurrency\nany concurrent will pick next batch
-        DB --> API : outbox batch
-        API --> API : extract events
-        API --> K : publish events batch
-        alt successful publish
-            K -[#green]-> API : ACK publish
-            API --> DB : flag outbox as published
-            note right: set publishedAt
-        else error publish
-            K -[#red]-> API : ERROR
-            API -[#red]-> API : or ERROR
-            alt recoverable error
-                note across
-                    **recoverable/transient errors:**
-                    timeout
-                    election in progress
-                    broker down
-                    schema registry unreachable
-                end note
-                API --> API : do nothing
-            else non recoverable error
-                note across
-                    **non recoverable/permanent errors:**
-                    bad payload
-                    serialization
-                    incompatible schema
-                    unhandled
-                end note
-                alt attempts < max_attempts
-                    API --> DB : inc attempts
-                else attempts >= max_attempts
-                    API --> DB : flag outbox as dead letter
-                    note right: set lastError
+        note across: keep draining unpublished outbox messages until none is left then sleeps\nis gated by a linear back off in case kafka env is unhealthy
+        group transactional
+            note across: transaction here to lock current batch in DB in case of concurrency\nany concurrent will pick next batch
+            API --> DB : get unpublished outbox batch
+            note right: **publishedAt == null AND attempts < max_attempts**
+            DB --> API : outbox batch
+            API --> API : extract events
+            note across: detach from any transaction, not needed
+            API --> K : publish batch
+            K --> API: return futures
+            loop for each future
+                API --> API : acquire future result
+                alt successful publish
+                    K -[#green]-> API : ACK publish
+                    API --> DB : flag outbox as published
+                    note right: set publishedAt
+                else unsuccessful publish
+                    K -[#red]-> API : ERROR
+                    API -[#red]-> API : or ERROR
+                    alt recoverable error
+                        note across
+                            **recoverable/transient errors:**
+                            timeout
+                            election in progress
+                            broker down
+                            schema registry unreachable
+                        end note
+                        API --> API : do nothing
+                    else non recoverable error
+                        note across
+                            **non recoverable/permanent errors:**
+                            bad payload
+                            serialization
+                            incompatible schema
+                            unhandled
+                        end note
+                        alt attempts < max_attempts
+                            API --> DB : inc attempts
+                        else attempts >= max_attempts
+                            API --> DB : flag outbox as dead letter
+                            note right: set lastError
+                        end
+                    end
                 end
             end
         end

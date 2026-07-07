@@ -1,16 +1,14 @@
-package com.hamza.kafka.order
+package com.hamza.kafka.commons
 
 import org.springframework.scheduling.annotation.Scheduled
-import org.springframework.stereotype.Service
 
-interface IPollingService {
+interface IPollService {
     fun poll()
 }
 
-@Service
-class PollingService(
-    private val trigger: IDrainTrigger,
-) : IPollingService {
+class PollService(
+    private val trigger: ITrigger,
+) : IPollService {
     @Scheduled(initialDelayString = $$"${custom.poll_initial_delay}", fixedDelayString = $$"${custom.poll_delay}")
     override fun poll() = trigger.trigger()
 }
