@@ -1,6 +1,7 @@
 package com.hamza.kafka.inventory
 
 import com.hamza.commons.OrderPlacedEvent
+import com.hamza.commons.OrderStatus
 import com.hamza.kafka.commons.createEventItem
 import com.hamza.kafka.commons.createOrderPlacedEvent
 import com.hamza.kafka.commons.fromJson
@@ -33,7 +34,7 @@ class CommonsTest {
                 """
 {"id":"0qsbs74grkjq2","customerId":"user_2203","createdAt":"2026-06-23T11:44:28Z","items":[{"sku":"sku-01","quantity":10,"unitPriceCents":199}]}
                 """.trimIndent(),
-            status = Status.ACCEPTED,
+            status = OrderStatus.ACCEPTED,
         ).apply {
             id = "0qsbs74grkjq2"
             processedAt = Instant.parse("2026-01-01T00:00:00Z")

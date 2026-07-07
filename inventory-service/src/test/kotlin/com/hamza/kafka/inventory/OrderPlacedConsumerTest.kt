@@ -29,7 +29,10 @@ import java.time.Duration
 @Import(PgTestContainer::class, KafkaTestContainer::class)
 class OrderPlacedConsumerTest {
     @Autowired
-    private lateinit var repo: InboxRepository
+    private lateinit var inboxRepo: InboxRepository
+
+    @Autowired
+    private lateinit var outboxRepo: OutboxRepository
 
     @Value($$"${custom.topic_name}")
     private lateinit var topicName: String
@@ -59,11 +62,13 @@ class OrderPlacedConsumerTest {
 
     @AfterEach
     fun afterEach() {
-        repo.deleteAll()
+        inboxRepo.deleteAll()
+        outboxRepo.deleteAll()
+        producer.close()
     }
 
     @Test
-    fun `consumes event and persists inbox row`() {
+    fun `consume event and persist inbox row`() {
         val event =
             createOrderPlacedEvent(
                 orderId = TSIDGenerator.next(),
@@ -74,14 +79,15 @@ class OrderPlacedConsumerTest {
         producer.send(ProducerRecord(topicName, event.eventId, event)).get()
 
         await().atMost(Duration.ofSeconds(30)).untilAsserted {
-            assertThat(repo.count()).isOne
-            repo.findAll().first().also {
+            assertThat(inboxRepo.count()).isOne
+            inboxRepo.findAll().first().also {
                 assertThat(it.processedAt).isNotNull
                 assertThat(it.status).isNotNull
                 assertThat(fromJson<OrderPlacedEvent>(it.payload)).isEqualTo(event)
             }
         }
 
+        // check ack
         await().atMost(Duration.ofSeconds(30)).untilAsserted {
             adminClient
                 .listConsumerGroupOffsets(groupId)

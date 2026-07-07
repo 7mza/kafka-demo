@@ -1,5 +1,6 @@
 package com.hamza.kafka.inventory
 
+import com.hamza.commons.OrderStatus
 import com.hamza.kafka.commons.ICDCListener
 import jakarta.persistence.EntityManagerFactory
 import org.assertj.core.api.Assertions.assertThat
@@ -33,7 +34,7 @@ class JCacheTest {
             orderId = "0qsbs74grkjq3",
             eventType = "eventType",
             payload = "{}".trimIndent(),
-            status = Status.entries.random(),
+            status = OrderStatus.entries.random(),
         )
 
     @BeforeEach

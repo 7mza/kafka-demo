@@ -1,0 +1,19 @@
+{
+  "type": "record",
+  "name": "Item",
+  "namespace": "com.hamza.commons",
+  "fields": [
+    {
+      "name": "sku",
+      "type": "string"
+    },
+    {
+      "name": "quantity",
+      "type": "int"
+    },
+    {
+      "name": "unitPriceCents",
+      "type": "int"
+    }
+  ]
+}

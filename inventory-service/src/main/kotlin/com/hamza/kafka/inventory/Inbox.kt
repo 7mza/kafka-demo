@@ -1,7 +1,10 @@
 package com.hamza.kafka.inventory
 
 import com.hamza.commons.OrderPlacedEvent
+import com.hamza.commons.OrderStatus
 import com.hamza.kafka.commons.BaseInbox
+import com.hamza.kafka.commons.createOrderDecidedEvent
+import com.hamza.kafka.commons.fromJson
 import com.hamza.kafka.commons.toJson
 import jakarta.persistence.Cacheable
 import jakarta.persistence.Entity
@@ -20,8 +23,6 @@ fun OrderPlacedEvent.toInbox() =
         payload = this.toJson(),
     ).apply { id = eventId }
 
-enum class Status { ACCEPTED, REJECTED }
-
 @Entity
 @Table(name = "orders_inbox")
 @Cacheable
@@ -32,12 +33,18 @@ class Inbox(
     payload: String,
     //
     @field:Enumerated(EnumType.ORDINAL)
-    var status: Status? = null,
+    var status: OrderStatus? = null,
 ) : BaseInbox(
         orderId = orderId,
         eventType = eventType,
         payload = payload,
-    )
+    ) {
+    fun toOrderDecidedEvent() =
+        createOrderDecidedEvent(
+            order = fromJson<OrderPlacedEvent>(this.payload),
+            status = this.status!!, // !! on null should never happen
+        )
+}
 
 interface InboxRepository : JpaRepository<Inbox, String> {
     @Query(

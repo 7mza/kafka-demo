@@ -11,7 +11,22 @@ create table orders_inbox
     "orderId"     varchar(13)                 not null,
     "eventType"   varchar(100)                not null,
     payload       jsonb                       not null,
-    primary key (id)
+    primary key (id),
+    constraint orders_inbox_version_check check (version >= 0)
+);
+
+create table orders_outbox
+(
+    "createdAt"   timestamp(6) with time zone not null,
+    "updatedAt"   timestamp(6) with time zone not null,
+    version       integer default 0           not null,
+    id            varchar(13)                 not null,
+    "orderId"     varchar(13)                 not null,
+    "eventType"   varchar(100)                not null,
+    topic         varchar(100)                not null,
+    payload       jsonb                       not null,
+    primary key (id),
+    constraint orders_outbox_version_check check (version >= 0)
 );
 
 /* unprocessed inbox rows index */

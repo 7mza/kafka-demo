@@ -26,24 +26,7 @@
       "name": "items",
       "type": {
         "type": "array",
-        "items": {
-          "type": "record",
-          "name": "Item",
-          "fields": [
-            {
-              "name": "sku",
-              "type": "string"
-            },
-            {
-              "name": "quantity",
-              "type": "int"
-            },
-            {
-              "name": "unitPriceCents",
-              "type": "int"
-            }
-          ]
-        }
+        "items": "com.hamza.commons.Item"
       }
     },
     {

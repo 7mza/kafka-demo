@@ -3,6 +3,7 @@ skinparam sequenceMessageAlign center
 
 control INVENTORY_SERVICE as SERVICE
 database DATABASE as DB
+control DEBEZIUM as Z
 queue KAFKA as K
 
 loop
@@ -28,20 +29,36 @@ end
 group listener on DB `inbox_channel`
     SERVICE <--> DB: listen/notify
     note left: manual CDC
-    note right: trigger on insert that notify **inbox_channel**
+    note right: trigger on **inbox.insert** that notify **inbox_channel**
     SERVICE --> SERVICE: trigger process service
     loop until no unprocessed inbox is retrieved
         note across: keep processing unprocessed inbox messages until none is left then sleeps
         group transactional
-            note across: transaction here to lock current batch in DB in case of concurrency\nany concurrent will pick next batch
-            SERVICE --> DB : get unprocessed inbox batch
+            note across: transaction here to lock current batch in DB in case of concurrency\nany concurrent will pick next batch\nand make inbox/processing/outbox atomic
+            SERVICE --> DB: get unprocessed inbox batch
             note right: **processedAt == null**\nwill lock current batch in DB in case of concurrency\nany concurrent will pick next batch
-            DB --> SERVICE : inbox batch
-            SERVICE --> SERVICE : process batch
+            DB --> SERVICE: inbox batch
+            SERVICE --> SERVICE: process batch
             note right: **business logic here**\nfor demo: randomly accept or reject order\n(accepted/rejected status)
-            SERVICE --> DB : flag batch as processed
+            SERVICE --> DB: flag batch as processed
             note right: set processedAt
+            SERVICE --> SERVICE: create **order decided events** batch
+            SERVICE --> SERVICE: create outbox batch
+            note right: accepted/rejected status determine topic column
+            SERVICE --> DB: store outbox batch
         end
+    end
+end
+
+group debezium
+    note across: automatic CDC
+    Z --> DB: open replication slot
+    loop
+        DB --> Z: stream committed outbox inserts (WAL)
+        Z --> Z: extract payload + route by **topic** column
+        note left: outbox event router\nrow already carries accepted/rejected decision\n(topic + payload from service)
+        Z --> K: publish to correct topic
+        Z --> DB: commit WAL offset
     end
 end
 

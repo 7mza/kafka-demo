@@ -1,7 +1,9 @@
 package com.hamza.kafka.commons
 
 import com.hamza.commons.Item
+import com.hamza.commons.OrderDecidedEvent
 import com.hamza.commons.OrderPlacedEvent
+import com.hamza.commons.OrderStatus
 import org.apache.avro.io.DecoderFactory
 import org.apache.avro.io.EncoderFactory
 import org.apache.avro.specific.SpecificDatumReader
@@ -65,4 +67,18 @@ fun createOrderPlacedEvent(
         .setCustomerId(customerId)
         .setItems(items)
         .setTotalAmountCents(items.sumOf { it.unitPriceCents * it.quantity })
+        .build()
+
+fun createOrderDecidedEvent(
+    evenId: String? = null,
+    occurredAt: Instant? = null,
+    order: OrderPlacedEvent,
+    status: OrderStatus,
+): OrderDecidedEvent =
+    OrderDecidedEvent
+        .newBuilder()
+        .setEventId(evenId ?: TSIDGenerator.next())
+        .setOccurredAt(occurredAt ?: Instant.now().truncatedTo(ChronoUnit.MILLIS))
+        .setOrder(order)
+        .setStatus(status)
         .build()

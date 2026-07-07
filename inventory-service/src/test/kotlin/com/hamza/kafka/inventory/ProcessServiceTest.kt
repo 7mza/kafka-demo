@@ -1,6 +1,10 @@
 package com.hamza.kafka.inventory
 
-import com.hamza.kafka.commons.TSIDGenerator
+import com.hamza.commons.OrderDecidedEvent
+import com.hamza.commons.OrderPlacedEvent
+import com.hamza.kafka.commons.createEventItem
+import com.hamza.kafka.commons.createOrderPlacedEvent
+import com.hamza.kafka.commons.fromJson
 import org.assertj.core.api.Assertions.assertThat
 import org.awaitility.Awaitility.await
 import org.junit.jupiter.api.AfterEach
@@ -19,24 +23,29 @@ import java.time.Duration
 @Import(PgTestContainer::class)
 class ProcessServiceTest {
     @Autowired
-    private lateinit var repo: InboxRepository
+    private lateinit var inboxRepo: InboxRepository
+
+    @Autowired
+    private lateinit var outboxRepo: OutboxRepository
 
     @MockitoSpyBean
     private lateinit var processService: IProcessService<Inbox>
 
-    private val orders =
+    private val events =
         listOf(
-            Inbox(
-                orderId = TSIDGenerator.next(),
-                eventType = "event1",
-                payload = "{}",
+            createOrderPlacedEvent(
+                orderId = "0qsbs74grkjq2",
+                customerId = "user_2203",
+                items = listOf(createEventItem(sku = "sku-01", quantity = 10, unitPriceCents = 199)),
             ),
-            Inbox(
-                orderId = TSIDGenerator.next(),
-                eventType = "event2",
-                payload = "{}",
+            createOrderPlacedEvent(
+                orderId = "0qsbs74grkjq3",
+                customerId = "user_2903",
+                items = listOf(createEventItem(sku = "sku-02", quantity = 11, unitPriceCents = 200)),
             ),
         )
+
+    private val inboxes = events.map { it.toInbox() }
 
     @BeforeEach
     fun beforeEach() {
@@ -45,18 +54,36 @@ class ProcessServiceTest {
 
     @AfterEach
     fun afterEach() {
-        repo.deleteAll()
+        inboxRepo.deleteAll()
+        outboxRepo.deleteAll()
     }
 
     @Test
-    fun `any change to inbox db, should trigger ProcessService and mark inbox messages as processed`() {
-        repo.saveAll(orders)
+    fun `any change to inbox db should trigger ProcessService`() {
+        inboxRepo.saveAll(inboxes)
         await().atMost(Duration.ofSeconds(30)).untilAsserted {
             verify(processService, atLeastOnce()).process()
         }
-        repo.findAll().also { response ->
-            assertThat(response.all { it.processedAt != null }).isTrue
-            assertThat(response.all { it.status != null }).isTrue
+
+        // check inboxes created with related placed events
+        events.forEach { placed ->
+            inboxRepo.findByOrderId(placed.orderId).also { inbox ->
+                assertThat(inbox).isNotNull
+                assertThat(inbox!!.processedAt).isNotNull
+                assertThat(inbox.status).isNotNull
+                assertThat(fromJson<OrderPlacedEvent>(inbox.payload)).isEqualTo(placed)
+
+                // check outboxes created with related decided events
+                outboxRepo.findByOrderId(placed.orderId).also { outbox ->
+                    assertThat(outbox).isNotNull
+                    assertThat(outbox!!.eventType).isEqualTo(inbox.toOrderDecidedEvent().schema.name)
+                    assertThat(outbox.topic).isEqualTo(inbox.status!!.toTopic())
+                    fromJson<OrderDecidedEvent>(outbox.payload).also { payload ->
+                        assertThat(payload.status).isEqualTo(inbox.status)
+                        assertThat(payload.order).isEqualTo(placed)
+                    }
+                }
+            }
         }
     }
 }

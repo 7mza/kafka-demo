@@ -2,14 +2,10 @@ package com.hamza.kafka.commons
 
 import jakarta.persistence.Column
 import jakarta.persistence.MappedSuperclass
-import jakarta.validation.constraints.Min
 import jakarta.validation.constraints.NotBlank
-import jakarta.validation.constraints.Pattern
 import jakarta.validation.constraints.Size
-import org.hibernate.annotations.ColumnDefault
 import org.hibernate.annotations.JdbcTypeCode
 import org.hibernate.type.SqlTypes
-import java.time.Instant
 
 @MappedSuperclass
 abstract class BaseOutbox(
@@ -32,15 +28,4 @@ abstract class BaseOutbox(
     @field:JdbcTypeCode(SqlTypes.JSON)
     @field:NotBlank
     var payload: String,
-    //
-    var publishedAt: Instant? = null,
-    //
-    @field:Column(nullable = false)
-    @field:ColumnDefault("0")
-    @field:Min(0)
-    var attempts: Int = 0,
-    //
-    @field:Column(columnDefinition = "text")
-    @field:Pattern(regexp = ".*\\S.*", message = "must not be blank")
-    var lastError: String? = null,
 ) : BaseEntity()

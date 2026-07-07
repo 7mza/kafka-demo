@@ -12,6 +12,9 @@
     alias="orders_inbox"
     uses-template="short" />
   <cache
+    alias="orders_outbox"
+    uses-template="short" />
+  <cache
     alias="default-query-results-region"
     uses-template="short" />
   <cache-template name="long">

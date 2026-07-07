@@ -1,0 +1,7 @@
+{
+  "type": "enum",
+  "name": "OrderStatus",
+  "namespace": "com.hamza.commons",
+  "symbols": ["ACCEPTED", "REJECTED"],
+  "default": "REJECTED"
+}

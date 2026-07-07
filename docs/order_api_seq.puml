@@ -6,41 +6,41 @@ boundary ORDER_API as API
 database DATABASE as DB
 queue KAFKA as K
 
-U -> API : POST order
+U -> API: POST order
 group transactional
-    API --> DB : save order
-    DB --> API : order
-    API --> API : create event
-    API --> API : create outbox
-    API --> DB : save outbox
+    API --> DB: save order
+    DB --> API: order
+    API --> API: create **order placed event**
+    API --> API: create outbox
+    API --> DB: save outbox
 end
-API -> U : order
+API -> U: order
 
 group listener on DB `outbox_channel`
     API <--> DB: listen/notify
     note left: manual CDC
-    note right: trigger on insert that notify **outbox_channel**
+    note right: trigger on **outbox.insert** that notify **outbox_channel**
     API --> API: trigger drain service
     loop until no unpublished outbox is retrieved
         note across: keep draining unpublished outbox messages until none is left then sleeps\nis gated by a linear back off in case kafka env is unhealthy
         group transactional
             note across: transaction here to lock current batch in DB in case of concurrency\nany concurrent will pick next batch
-            API --> DB : get unpublished outbox batch
+            API --> DB: get unpublished outbox batch
             note right: **publishedAt == null AND attempts < max_attempts**
-            DB --> API : outbox batch
-            API --> API : extract events
+            DB --> API: outbox batch
+            API --> API: extract events
             note across: detach from any transaction, not needed
-            API --> K : publish batch
+            API --> K: publish batch
             K --> API: return futures
             loop for each future
-                API --> API : acquire future result
+                API --> API: acquire future result
                 alt successful publish
-                    K -[#green]-> API : ACK publish
-                    API --> DB : flag outbox as published
+                    K -[#green]-> API: ACK publish
+                    API --> DB: flag outbox as published
                     note right: set publishedAt
                 else unsuccessful publish
-                    K -[#red]-> API : ERROR
-                    API -[#red]-> API : or ERROR
+                    K -[#red]-> API: ERROR
+                    API -[#red]-> API: or ERROR
                     alt recoverable error
                         note across
                             **recoverable/transient errors:**
@@ -49,7 +49,7 @@ group listener on DB `outbox_channel`
                             broker down
                             schema registry unreachable
                         end note
-                        API --> API : do nothing
+                        API --> API: do nothing
                     else non recoverable error
                         note across
                             **non recoverable/permanent errors:**
@@ -59,9 +59,9 @@ group listener on DB `outbox_channel`
                             unhandled
                         end note
                         alt attempts < max_attempts
-                            API --> DB : inc attempts
+                            API --> DB: inc attempts
                         else attempts >= max_attempts
-                            API --> DB : flag outbox as dead letter
+                            API --> DB: flag outbox as dead letter
                             note right: set lastError
                         end
                     end

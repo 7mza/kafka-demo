@@ -1,0 +1,26 @@
+{
+  "type": "record",
+  "name": "OrderDecidedEvent",
+  "namespace": "com.hamza.commons",
+  "fields": [
+    {
+      "name": "eventId",
+      "type": "string"
+    },
+    {
+      "name": "occurredAt",
+      "type": {
+        "type": "long",
+        "logicalType": "timestamp-millis"
+      }
+    },
+    {
+      "name": "order",
+      "type": "com.hamza.commons.OrderPlacedEvent"
+    },
+    {
+      "name": "status",
+      "type": "com.hamza.commons.OrderStatus"
+    }
+  ]
+}

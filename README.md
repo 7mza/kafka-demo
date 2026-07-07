@@ -6,9 +6,10 @@ event-driven pipeline demo
 
 - clustering / replication/ partitioning
 - Avro schema / registry
-- CDC
 - transactional outbox write
 - idempotent transactional inbox read
+- manual CDC
+- automatic CDC with Debezium
 - backoff / retry / rescue
 - dead lettering
 - GraalVM

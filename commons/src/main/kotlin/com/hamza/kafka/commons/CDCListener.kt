@@ -38,15 +38,19 @@ class CDCListener(
                         val notifications = pgConn.getNotifications(10_000)
                         if (!notifications.isNullOrEmpty()) {
                             logger.info("Received {} notifications, triggering {}", notifications.size, triggerName)
-                            trigger.trigger()
+                            try {
+                                trigger.trigger()
+                            } catch (ex: Exception) {
+                                logger.error("Trigger {} failed", triggerName, ex)
+                            }
                         }
                     }
                 }
             } catch (_: InterruptedException) {
                 Thread.currentThread().interrupt()
                 break
-            } catch (_: Exception) {
-                logger.warn("Listener connection lost, reconnecting in 5s")
+            } catch (ex: Exception) {
+                logger.warn("Listener connection lost, reconnecting in 5s", ex)
                 Thread.sleep(ofSeconds(5).toMillis())
             }
         }
