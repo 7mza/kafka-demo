@@ -1,6 +1,7 @@
 package com.hamza.kafka.inventory
 
 import com.hamza.commons.OrderPlacedEvent
+import com.hamza.kafka.commons.KafkaConsumer
 import com.hamza.kafka.commons.toJson
 import jakarta.transaction.Transactional
 import org.apache.kafka.clients.consumer.ConsumerRecord

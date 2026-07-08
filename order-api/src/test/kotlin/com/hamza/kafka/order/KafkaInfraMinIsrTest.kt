@@ -1,6 +1,8 @@
 package com.hamza.kafka.order
 
 import com.hamza.commons.OrderPlacedEvent
+import com.hamza.kafka.commons.KafkaReplicationTestContainers
+import com.hamza.kafka.commons.PgTestContainer
 import com.hamza.kafka.commons.createEventItem
 import com.hamza.kafka.commons.createOrderPlacedEvent
 import io.confluent.kafka.serializers.AbstractKafkaSchemaSerDeConfig

@@ -2,6 +2,7 @@ package com.hamza.kafka.inventory
 
 import com.hamza.commons.OrderDecidedEvent
 import com.hamza.commons.OrderPlacedEvent
+import com.hamza.kafka.commons.PgTestContainer
 import com.hamza.kafka.commons.createEventItem
 import com.hamza.kafka.commons.createOrderPlacedEvent
 import com.hamza.kafka.commons.fromJson

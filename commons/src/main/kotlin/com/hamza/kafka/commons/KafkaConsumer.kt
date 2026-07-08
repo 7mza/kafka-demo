@@ -1,4 +1,4 @@
-package com.hamza.kafka.inventory
+package com.hamza.kafka.commons
 
 import org.apache.avro.specific.SpecificRecordBase
 import org.apache.kafka.clients.consumer.ConsumerRecord

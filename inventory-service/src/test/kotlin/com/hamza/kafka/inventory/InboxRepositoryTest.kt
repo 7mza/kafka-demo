@@ -1,6 +1,7 @@
 package com.hamza.kafka.inventory
 
 import com.hamza.kafka.commons.ICDCListener
+import com.hamza.kafka.commons.PgTestContainer
 import com.hamza.kafka.commons.TSIDGenerator
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterEach

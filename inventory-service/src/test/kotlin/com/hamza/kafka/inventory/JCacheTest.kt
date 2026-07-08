@@ -2,6 +2,7 @@ package com.hamza.kafka.inventory
 
 import com.hamza.commons.OrderStatus
 import com.hamza.kafka.commons.ICDCListener
+import com.hamza.kafka.commons.PgTestContainer
 import jakarta.persistence.EntityManagerFactory
 import org.assertj.core.api.Assertions.assertThat
 import org.hibernate.SessionFactory

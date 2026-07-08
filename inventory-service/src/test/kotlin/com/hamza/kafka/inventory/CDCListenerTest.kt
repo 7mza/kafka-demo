@@ -1,6 +1,7 @@
 package com.hamza.kafka.inventory
 
 import com.hamza.kafka.commons.ITrigger
+import com.hamza.kafka.commons.ProxiedPgTestContainer
 import com.hamza.kafka.commons.TSIDGenerator
 import eu.rekawek.toxiproxy.Proxy
 import org.awaitility.Awaitility.await

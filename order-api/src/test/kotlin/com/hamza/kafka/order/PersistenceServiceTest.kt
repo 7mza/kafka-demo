@@ -2,6 +2,7 @@ package com.hamza.kafka.order
 
 import com.hamza.commons.OrderPlacedEvent
 import com.hamza.kafka.commons.ICDCListener
+import com.hamza.kafka.commons.PgTestContainer
 import com.hamza.kafka.commons.ResourceNotFoundException
 import com.hamza.kafka.commons.TSIDGenerator
 import com.hamza.kafka.commons.fromJson

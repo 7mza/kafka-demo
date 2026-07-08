@@ -1,5 +1,6 @@
 package com.hamza.kafka.order
 
+import com.hamza.kafka.commons.PgTestContainer
 import jakarta.persistence.EntityManagerFactory
 import org.assertj.core.api.Assertions.assertThat
 import org.hibernate.SessionFactory
