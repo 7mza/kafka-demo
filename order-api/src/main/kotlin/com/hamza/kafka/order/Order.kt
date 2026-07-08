@@ -1,11 +1,16 @@
 package com.hamza.kafka.order
 
 import com.hamza.commons.OrderPlacedEvent
+import com.hamza.commons.OrderStatus
 import com.hamza.kafka.commons.BaseEntity
+import com.hamza.kafka.commons.Status
 import com.hamza.kafka.commons.createOrderPlacedEvent
+import com.hamza.kafka.commons.toDto
 import jakarta.persistence.Cacheable
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
+import jakarta.persistence.EnumType
+import jakarta.persistence.Enumerated
 import jakarta.persistence.Table
 import jakarta.validation.Valid
 import jakarta.validation.constraints.Min
@@ -57,6 +62,9 @@ class Order(
     @field:Valid // FIXME: deprecated
     @field:NotEmpty
     var items: List<@Valid Item>,
+    //
+    @field:Enumerated(EnumType.ORDINAL)
+    var status: OrderStatus? = null,
 ) : BaseEntity() {
     fun toOrderPlacedEvent(): OrderPlacedEvent =
         createOrderPlacedEvent(
@@ -71,6 +79,7 @@ class Order(
             customerId = this.customerId,
             createdAt = this.createdAt.truncatedTo(ChronoUnit.SECONDS).toString(),
             items = this.items.map { it.toDto() },
+            status = this.status?.toDto() ?: Status.PENDING,
         )
 }
 

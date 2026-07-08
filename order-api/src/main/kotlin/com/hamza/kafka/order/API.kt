@@ -52,7 +52,8 @@ interface API {
       "quantity": 10,
       "unitPriceCents": 199
     }
-  ]
+  ],
+  "status": "PENDING"
 }
 """,
                             ),
@@ -92,7 +93,8 @@ interface API {
       "quantity": 10,
       "unitPriceCents": 199
     }
-  ]
+  ],
+  "status": "PENDING"
 }
 """,
                             ),
@@ -105,43 +107,6 @@ interface API {
     fun getOrderById(
         @Parameter(description = "order id") @PathVariable @NotBlank @Size(min = 13, max = 13) id: String,
     ): OrderGetDto
-
-    @GetMapping("/outbox/{id}")
-    @Operation(summary = "Get an order outbox message by orderId", description = "")
-    @ApiResponses(
-        value = [
-            ApiResponse(
-                responseCode = "200",
-                description = "OK",
-                content = [
-                    Content(
-                        mediaType = MediaType.APPLICATION_JSON_VALUE,
-                        schema = Schema(OrderOutboxDto::class),
-                        examples = [
-                            ExampleObject(
-                                name = "example-0",
-                                value = """
-{
-  "id": "0qtc1hmz3p6nk",
-  "orderId": "0qsbs74grkjq2",
-  "eventType": "order.placed",
-  "topic": "orders.placed",
-  "payload": "{\"items\": [{\"sku\": \"sku-01\", \"quantity\": 10, \"unitPriceCents\": 199}], \"eventId\": \"0qtc1hmz3p6nk\", \"orderId\": \"0qsbs74grkjq2\", \"eventType\": \"order.placed\", \"customerId\": \"user_2203\", \"occurredAt\": \"2026-06-26T14:54:47.544Z\", \"totalAmountCents\": 1990}",
-  "publishedAt": "2026-06-26T14:54:57.536Z",
-  "attempts": 0,
-  "lastError": null
-}
-""",
-                            ),
-                        ],
-                    ),
-                ],
-            ),
-        ],
-    )
-    fun getOutboxByOrderId(
-        @Parameter(description = "order id") @PathVariable @NotBlank @Size(min = 13, max = 13) id: String,
-    ): OrderOutboxDto
 
     @GetMapping("/dl")
     @Operation(

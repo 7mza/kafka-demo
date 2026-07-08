@@ -20,7 +20,5 @@ class Controller(
 
     override fun getOrderById(id: String) = service.getOrderById(id).toDto()
 
-    override fun getOutboxByOrderId(id: String) = service.getOutboxByOrderId(id).toDto()
-
     override fun getDeadLetters() = service.getDeadLetters().map { it.toDto() }.let { DeadLettersDto(it) }
 }

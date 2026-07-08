@@ -13,8 +13,6 @@ interface IPersistenceService {
 
     fun getOrderById(id: String): Order
 
-    fun getOutboxByOrderId(id: String): Outbox
-
     fun getDeadLetters(): List<DeadLetterProjection>
 }
 
@@ -39,9 +37,6 @@ class PersistenceService(
 
     override fun getOrderById(id: String): Order =
         orderRepo.findById(id).orElseThrow { ResourceNotFoundException(id = id, name = "Order") }
-
-    override fun getOutboxByOrderId(id: String) =
-        orderOutboxRepo.findByOrderId(id) ?: throw ResourceNotFoundException(id = id, name = "OrderOutbox")
 
     override fun getDeadLetters(): List<DeadLetterProjection> = deadLetterRepo.findAll()
 }

@@ -5,6 +5,7 @@ create table orders
     "createdAt"  timestamp(6) with time zone not null,
     "updatedAt"  timestamp(6) with time zone not null,
     version      integer default 0           not null,
+    status       smallint,
     id           varchar(13)                 not null,
     "customerId" varchar(13)                 not null,
     items        jsonb                       not null,
@@ -15,8 +16,8 @@ create table orders
 create table orders_outbox
 (
     "createdAt"   timestamp(6) with time zone not null,
-    "publishedAt" timestamp(6) with time zone,
     "updatedAt"   timestamp(6) with time zone not null,
+    "publishedAt" timestamp(6) with time zone,
     attempts      integer default 0           not null,
     version       integer default 0           not null,
     id            varchar(13)                 not null,

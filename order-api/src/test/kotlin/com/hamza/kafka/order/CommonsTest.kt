@@ -1,6 +1,7 @@
 package com.hamza.kafka.order
 
 import com.hamza.commons.OrderPlacedEvent
+import com.hamza.kafka.commons.Status
 import com.hamza.kafka.commons.createEventItem
 import com.hamza.kafka.commons.createOrderPlacedEvent
 import com.hamza.kafka.commons.fromJson
@@ -22,7 +23,7 @@ class CommonsTest {
 
     private val orderJson =
         """
-{"id":"0qsbs74grkjq2","customerId":"user_2203","createdAt":"2026-06-23T11:44:28Z","items":[{"sku":"sku-01","quantity":10,"unitPriceCents":199}]}
+{"id":"0qsbs74grkjq2","customerId":"user_2203","createdAt":"2026-06-23T11:44:28Z","items":[{"sku":"sku-01","quantity":10,"unitPriceCents":199}],"status":"ACCEPTED"}
         """.trimIndent()
 
     private val order =
@@ -31,6 +32,7 @@ class CommonsTest {
             customerId = "user_2203",
             createdAt = "2026-06-23T11:44:28Z",
             items = listOf(ItemDto(sku = "sku-01", quantity = 10, unitPriceCents = 199)),
+            status = Status.ACCEPTED,
         )
 
     private val eventJson =

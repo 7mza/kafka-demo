@@ -1,5 +1,6 @@
 package com.hamza.kafka.order
 
+import com.hamza.commons.OrderStatus
 import com.hamza.kafka.commons.DeadLetterProjection
 import com.hamza.kafka.commons.DeadLettersDto
 import com.hamza.kafka.commons.ResourceNotFoundException
@@ -38,7 +39,11 @@ class ControllerTest {
     @Test
     fun `create valid order and check successful 201`() {
         val order =
-            Order(customerId = "user-2203", items = listOf(Item(sku = "sku-01", quantity = 10, unitPriceCents = 199)))
+            Order(
+                customerId = "user-2203",
+                items = listOf(Item(sku = "sku-01", quantity = 10, unitPriceCents = 199)),
+                status = OrderStatus.ACCEPTED,
+            )
         val request = OrderPostDto(customerId = order.customerId, items = order.items.map { it.toDto() })
         val json = writeJson(request, objectMapper)
 
@@ -221,42 +226,6 @@ class ControllerTest {
         client
             .get()
             .uri("/api/order/1111111111111")
-            .exchange()
-            .expectStatus()
-            .isNotFound
-    }
-
-    @Test
-    fun getOutboxByOrderId() {
-        val order =
-            Order(customerId = "user-2203", items = listOf(Item(sku = "sku-01", quantity = 10, unitPriceCents = 199)))
-        val outbox = order.toOrderPlacedEvent().toOutbox("")
-
-        whenever(service.getOutboxByOrderId(anyString())).thenReturn(outbox)
-
-        val response =
-            client
-                .get()
-                .uri("/api/order/outbox/${order.id}")
-                .exchange()
-                .expectStatus()
-                .isOk
-                .expectHeader()
-                .contentType(MediaType.APPLICATION_JSON)
-                .expectBody<OrderOutboxDto>()
-                .returnResult()
-
-        verify(service).getOutboxByOrderId(eq(order.id))
-        assertThat(response.responseBody).isEqualTo(outbox.toDto())
-    }
-
-    @Test
-    fun getOutboxByWrongOrderId() {
-        doThrow(ResourceNotFoundException(id = "id", name = "name")).whenever(service).getOutboxByOrderId(anyString())
-
-        client
-            .get()
-            .uri("/api/order/outbox/1111111111111")
             .exchange()
             .expectStatus()
             .isNotFound

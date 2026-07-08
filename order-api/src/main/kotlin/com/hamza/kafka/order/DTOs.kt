@@ -1,5 +1,6 @@
 package com.hamza.kafka.order
 
+import com.hamza.kafka.commons.Status
 import io.swagger.v3.oas.annotations.media.Schema
 import jakarta.validation.Valid
 import jakarta.validation.constraints.Min
@@ -31,6 +32,7 @@ data class OrderGetDto(
     val customerId: String,
     val createdAt: String,
     val items: List<ItemDto>,
+    val status: Status,
 )
 
 data class OrderPostDto(

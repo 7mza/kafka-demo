@@ -1,5 +1,6 @@
 package com.hamza.kafka.commons
 
+import com.hamza.commons.OrderStatus
 import java.time.Instant
 
 data class DeadLetterDto(
@@ -17,3 +18,15 @@ data class DeadLetterDto(
 data class DeadLettersDto(
     val results: List<DeadLetterDto>,
 )
+
+enum class Status {
+    PENDING,
+    ACCEPTED,
+    REJECTED,
+}
+
+fun OrderStatus.toDto() =
+    when (this) {
+        OrderStatus.ACCEPTED -> Status.ACCEPTED
+        OrderStatus.REJECTED -> Status.REJECTED
+    }

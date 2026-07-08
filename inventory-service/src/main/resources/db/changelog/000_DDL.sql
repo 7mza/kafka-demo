@@ -3,8 +3,8 @@
 create table orders_inbox
 (
     "createdAt"   timestamp(6) with time zone not null,
-    "processedAt" timestamp(6) with time zone,
     "updatedAt"   timestamp(6) with time zone not null,
+    "processedAt" timestamp(6) with time zone,
     version       integer default 0           not null,
     status        smallint,
     id            varchar(13)                 not null,
