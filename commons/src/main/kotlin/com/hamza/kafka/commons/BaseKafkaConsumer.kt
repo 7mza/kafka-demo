@@ -14,7 +14,6 @@ interface IKafkaConsumer<T : SpecificRecordBase> {
 }
 
 abstract class BaseKafkaConsumer<T : SpecificRecordBase, U : BaseInbox>(
-    private val appName: String,
     private val service: IConsumerService<T, U>,
 ) : IKafkaConsumer<T> {
     private val logger = LoggerFactory.getLogger(javaClass)
@@ -26,8 +25,7 @@ abstract class BaseKafkaConsumer<T : SpecificRecordBase, U : BaseInbox>(
     ) {
         val event = record.value()
         logger.info(
-            "{}: received new event '{}' from '{}-{}@{}'",
-            appName,
+            "received new event '{}' from '{}-{}@{}'",
             event.toJson(),
             record.topic(),
             record.partition(),

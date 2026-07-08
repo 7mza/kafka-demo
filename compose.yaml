@@ -76,6 +76,7 @@ services:
     deploy: *deploy
     environment:
       JAVA_OPTS: --add-modules jdk.incubator.vector
+      JAVA_TOOL_OPTIONS: -XX:+UseG1GC -XX:+UseStringDeduplication
       KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka1:19092,kafka2:19092,kafka3:19092
       KAFKA_CLUSTERS_0_DEFAULTVALUESERDE: SchemaRegistry
       KAFKA_CLUSTERS_0_KAFKACONNECT_0_ADDRESS: http://connect:8083
@@ -84,6 +85,7 @@ services:
       KAFKA_CLUSTERS_0_SCHEMAREGISTRY: http://schema-registry:9091
       LOGGING_LEVEL_IO_KAFBAT_UI: ERROR
       LOGGING_LEVEL_ROOT: ERROR
+      SPRING_MAIN_BANNER-MODE: off
     healthcheck:
       <<: *healthcheck
       test:
@@ -152,6 +154,7 @@ services:
         condition: service_healthy
     deploy: *deploy
     environment:
+      JAVA_TOOL_OPTIONS: -XX:+UseG1GC -XX:+UseStringDeduplication
       BOOTSTRAP_SERVERS: ${KAFKA_BOOTSTRAP_SERVERS}
       CONFIG_STORAGE_REPLICATION_FACTOR: 3
       CONFIG_STORAGE_TOPIC: debezium.configs

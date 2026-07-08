@@ -15,7 +15,6 @@ interface ICDCListener : ApplicationListener<ApplicationReadyEvent> {
 }
 
 class CDCListener(
-    private val appName: String,
     private val name: String,
     private val channel: String,
     private val dataSource: DataSource,
@@ -34,20 +33,15 @@ class CDCListener(
                 dataSource.connection.use {
                     val pgConn = it.unwrap(PGConnection::class.java)
                     it.createStatement().use { stm -> stm.execute("LISTEN $channel") }
-                    logger.info("{}: listening to DB events on channel {}", appName, channel)
+                    logger.info("listening to DB events on channel {}", channel)
                     while (!Thread.currentThread().isInterrupted) {
                         val notifications = pgConn.getNotifications(10_000)
                         if (!notifications.isNullOrEmpty()) {
-                            logger.info(
-                                "{}: received {} notifications, triggering {}",
-                                appName,
-                                notifications.size,
-                                triggerName,
-                            )
+                            logger.info("received {} notifications, triggering {}", notifications.size, triggerName)
                             try {
                                 trigger.trigger()
                             } catch (ex: Exception) {
-                                logger.error("{}: trigger {} failed", appName, triggerName, ex)
+                                logger.error("trigger {} failed", triggerName, ex)
                             }
                         }
                     }
@@ -56,7 +50,7 @@ class CDCListener(
                 Thread.currentThread().interrupt()
                 break
             } catch (ex: Exception) {
-                logger.warn("{}: listener connection lost, reconnecting in 5s", appName, ex)
+                logger.warn("listener connection lost, reconnecting in 5s", ex)
                 Thread.sleep(ofSeconds(5).toMillis())
             }
         }

@@ -20,7 +20,6 @@ logbook:
     include:
       - path: /api/**
 logging:
-  include-application-name: false
   level:
     com.hamza: debug
     org.apache.kafka: error

@@ -31,7 +31,6 @@ import javax.sql.DataSource
 @EnableScheduling
 class Configurations(
     @Value($$"${server.port}") private val port: Int,
-    @Value($$"${spring.application.name}") private val appName: String,
 ) {
     private val logger = LoggerFactory.getLogger(javaClass)
 
@@ -72,7 +71,7 @@ class Configurations(
         .build()
 
     @Bean
-    fun drainBackOff(): IDrainBackOff = DrainBackOff(appName = appName)
+    fun drainBackOff(): IDrainBackOff = DrainBackOff()
 
     @Bean
     fun cdcListener(
@@ -80,7 +79,6 @@ class Configurations(
         trigger: ITrigger,
     ): ICDCListener =
         CDCListener(
-            appName = appName,
             name = "outbox",
             channel = "outbox_channel",
             dataSource = dataSource,
@@ -88,5 +86,5 @@ class Configurations(
         )
 
     @Bean
-    fun pollService(trigger: ITrigger): IPollService = PollService(appName = appName, trigger = trigger)
+    fun pollService(trigger: ITrigger): IPollService = PollService(trigger)
 }

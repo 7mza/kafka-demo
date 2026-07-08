@@ -18,7 +18,6 @@ logbook:
     include:
       - path: /api/**
 logging:
-  include-application-name: false
   level:
     com.hamza: info
     org.apache.kafka: warn

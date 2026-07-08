@@ -7,7 +7,6 @@ custom:
     placed: orders.placed
     rejected: orders.rejected
 logging:
-  include-application-name: false
   level:
     com.hamza: info
     org.apache.kafka: warn
