@@ -22,7 +22,7 @@ class DrainBackOffTest {
             override fun withZone(zone: ZoneId?) = this
         }
 
-    private val backOff = DrainBackOff(clock)
+    private val backOff = DrainBackOff(appName = "toto", clock = clock)
 
     private val progressing = KafkaPublishResult(publishedCount = 1)
 

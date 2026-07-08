@@ -53,6 +53,7 @@ class PublishService(
                 future.get(publishTimeout.toNanos(), TimeUnit.NANOSECONDS)
                 result.publishedCount++
                 outbox.publishedAt = Instant.now().truncatedTo(ChronoUnit.MILLIS)
+                logger.info("published event '{}' to topic '{}' with success", outbox.payload, outbox.topic)
             } catch (ex: Exception) {
                 if (ex.isTransientFailure()) { // transient ex: don't inc attempts, next polls should retry
                     result.recoverableErrorsCount++

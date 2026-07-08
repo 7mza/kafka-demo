@@ -44,20 +44,21 @@ group listener on DB `inbox_channel`
             note right: set processedAt
             SERVICE --> SERVICE: create **order decided events** batch
             SERVICE --> SERVICE: create outbox batch
-            note right: accepted/rejected status determine topic column
+            note right: accepted/rejected status determine topic
             SERVICE --> DB: store outbox batch
         end
     end
 end
 
 group debezium
-    note across: automatic CDC
+    note across: automatic CDC and outbox publish
     Z --> DB: open replication slot
     loop
-        DB --> Z: stream committed outbox inserts (WAL)
+        DB --> Z: outbox inserts WAL
         Z --> Z: extract payload + route by **topic** column
-        note left: outbox event router\nrow already carries accepted/rejected decision\n(topic + payload from service)
-        Z --> K: publish to correct topic
+        note left: outbox event router\nrow carries topic decision from service
+        Z --> K: publish
+        note right: order.[accepted|rejected] topic
         Z --> DB: commit WAL offset
     end
 end

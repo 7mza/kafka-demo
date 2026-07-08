@@ -34,7 +34,7 @@ class OrderPlacedConsumerTest {
     @Autowired
     private lateinit var outboxRepo: OutboxRepository
 
-    @Value($$"${custom.topic_name}")
+    @Value($$"${custom.topics.placed}")
     private lateinit var topicName: String
 
     @Value($$"${spring.kafka.consumer.group-id}")

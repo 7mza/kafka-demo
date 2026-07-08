@@ -16,14 +16,14 @@ class OrderPlacedConsumer(
     private val logger = LoggerFactory.getLogger(javaClass)
 
     @Transactional
-    @KafkaListener(topics = [$$"${custom.topic_name}"])
+    @KafkaListener(topics = [$$"${custom.topics.placed}"])
     override fun onMessage(
         record: ConsumerRecord<String, OrderPlacedEvent>,
         ack: Acknowledgment,
     ) {
         val event = record.value()
         logger.info(
-            "received new order '{}' from '{}-{}@{}'",
+            "received new event '{}' from '{}-{}@{}'",
             event.toJson(),
             record.topic(),
             record.partition(),

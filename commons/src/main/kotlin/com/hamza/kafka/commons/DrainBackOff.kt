@@ -14,6 +14,7 @@ interface IDrainBackOff {
 }
 
 class DrainBackOff(
+    private val appName: String,
     private val clock: Clock = Clock.systemUTC(),
 ) : IDrainBackOff {
     private companion object {
@@ -48,7 +49,12 @@ class DrainBackOff(
             val coolDownMs = Duration.ofMillis((n * COOLDOWN_STEP_MS).coerceAtMost(MAX_COOLDOWN_MS))
             val until = clock.instant().plus(coolDownMs)
             cooldownUntil.set(until)
-            logger.warn("{} consecutive drain cycles with no progress, backing off for {}s", n, coolDownMs.toSeconds())
+            logger.warn(
+                "{}: {} consecutive drain cycles with no progress, backing off for {}s",
+                appName,
+                n,
+                coolDownMs.toSeconds(),
+            )
         }
     }
 }

@@ -23,6 +23,7 @@ import javax.sql.DataSource
 @EnableScheduling
 class Configurations(
     @Value($$"${server.port}") private val port: Int,
+    @Value($$"${spring.application.name}") private val appName: String,
 ) {
     private val logger = LoggerFactory.getLogger(javaClass)
 
@@ -40,8 +41,15 @@ class Configurations(
     fun cdcListener(
         dataSource: DataSource,
         trigger: ITrigger,
-    ): ICDCListener = CDCListener(name = "inbox", channel = "inbox_channel", dataSource = dataSource, trigger = trigger)
+    ): ICDCListener =
+        CDCListener(
+            appName = appName,
+            name = "inbox",
+            channel = "inbox_channel",
+            dataSource = dataSource,
+            trigger = trigger,
+        )
 
     @Bean
-    fun pollService(trigger: ITrigger): IPollService = PollService(trigger)
+    fun pollService(trigger: ITrigger): IPollService = PollService(appName = appName, trigger = trigger)
 }

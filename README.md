@@ -9,7 +9,7 @@ event-driven pipeline demo
 - transactional outbox write
 - idempotent transactional inbox read
 - manual CDC
-- automatic CDC with Debezium
+- automatic CDC / outbox publish with Debezium
 - backoff / retry / rescue
 - dead lettering
 - GraalVM
@@ -26,17 +26,17 @@ can be modified using [compose.yaml](compose.yaml) and [.env](.env)
 ## components
 
 ```yaml
-kafka-demo/
+kafka-demo/ # parent pom
 ├── commons/ # shared libs, Avro schemas/codegen
-├── order-api/ # producer
-├── inventory-service/ # consumer
+├── order-api/
+├── inventory-service/
 ```
 
-### order-api
+### [order-api](https://hub.docker.com/r/7mza/order-api)
 
 ![order api sequence UML](docs/order_api_seq.svg)
 
-### inventory-service
+### [inventory-service](https://hub.docker.com/r/7mza/inventory-service)
 
 ![inventory service sequence UML](docs/inventory_service_seq.svg)
 
@@ -49,6 +49,16 @@ docker compose up
 [order-api](http://localhost:8080/swagger-ui)
 
 [Kafbat UI](http://localhost:9090)
+
+## test
+
+```shell
+curl -X 'POST' \
+  'http://localhost:8080/api/order' \
+  -H 'accept: application/json' \
+  -H 'Content-Type: application/json' \
+  -d '{"customerId":"user_2203","items":[{"sku":"sku-01","quantity":10,"unitPriceCents":199}]}'
+```
 
 ## load test
 

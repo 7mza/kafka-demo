@@ -31,6 +31,7 @@ group listener on DB `outbox_channel`
             API --> API: extract events
             note across: detach from any transaction, not needed
             API --> K: publish batch
+            note right: order.placed topic
             K --> API: return futures
             loop for each future
                 API --> API: acquire future result

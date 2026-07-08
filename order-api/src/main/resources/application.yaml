@@ -7,7 +7,10 @@ custom:
   poll_initial_delay: PT1M
   publish_timeout: PT5S
   replication_factor: 1
-  topic_name: orders.placed
+  topics:
+    accepted: orders.accepted
+    placed: orders.placed
+    rejected: orders.rejected
 logbook:
   format:
     style: http
@@ -21,10 +24,7 @@ logging:
   level:
     com.hamza: info
     org.apache.kafka: warn
-    org.hibernate:
-      SQL: debug
-      SQL_SLOW: info
-      stat: debug
+    org.hibernate.SQL_SLOW: info
     org.zalando.logbook: trace
 management:
   endpoints:
@@ -178,7 +178,10 @@ custom:
   registry:
     host: schema-registry
   replication_factor: ${ORDERS_REPLICATION_FACTOR}
-  topic_name: ${ORDERS_TOPIC_NAME}
+  topics:
+    accepted: ${INVENTORY_ACCEPTED_ORDERS_TOPIC_NAME}
+    placed: ${ORDERS_PLACED_TOPIC_NAME}
+    rejected: ${INVENTORY_REJECTED_ORDERS_TOPIC_NAME}
 logging:
   level:
     org.apache.kafka: ${KAFKA_LOGGING_LEVEL:warn}

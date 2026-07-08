@@ -31,7 +31,7 @@ import java.util.UUID
         "custom.min_insync_replicas=3",
         "custom.partitions=3",
         "custom.replication_factor=3",
-        "custom.topic_name=isr.test.topic",
+        "custom.topics.placed=isr.test.topic",
     ],
 )
 @Import(PgTestContainer::class, KafkaReplicationTestContainers::class)
@@ -39,7 +39,7 @@ class KafkaInfraMinIsrTest {
     @Autowired
     private lateinit var service: IPublishService<Outbox>
 
-    @Value($$"${custom.topic_name}")
+    @Value($$"${custom.topics.placed}")
     private lateinit var topicName: String
 
     @Value($$"${custom.partitions}")

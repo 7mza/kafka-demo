@@ -32,7 +32,7 @@ import java.util.UUID
         "custom.min_insync_replicas=2",
         "custom.partitions=3",
         "custom.replication_factor=3",
-        "custom.topic_name=infra.test.topic",
+        "custom.topics.placed=infra.test.topic",
         "spring.kafka.producer.properties.request.timeout.ms=5000",
     ],
 )
@@ -41,7 +41,7 @@ class KafkaInfraTest {
     @Autowired
     private lateinit var service: IPublishService<Outbox>
 
-    @Value($$"${custom.topic_name}")
+    @Value($$"${custom.topics.placed}")
     private lateinit var topicName: String
 
     @Value($$"${custom.partitions}")

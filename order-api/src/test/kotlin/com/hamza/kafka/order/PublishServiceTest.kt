@@ -32,7 +32,7 @@ class PublishServiceTest {
     @Autowired
     private lateinit var service: IPublishService<Outbox>
 
-    @Value($$"${custom.topic_name}")
+    @Value($$"${custom.topics.placed}")
     private lateinit var topicName: String
 
     @Value($$"${custom.partitions}")

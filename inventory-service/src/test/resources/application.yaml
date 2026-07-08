@@ -4,7 +4,10 @@ custom:
   batch_size: 10
   poll_delay: PT24H
   poll_initial_delay: PT24H
-  topic_name: test.topic
+  topics:
+    accepted: orders.accepted
+    placed: orders.placed
+    rejected: orders.rejected
 logging:
   include-application-name: false
   level:

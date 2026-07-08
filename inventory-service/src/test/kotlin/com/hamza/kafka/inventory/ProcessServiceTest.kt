@@ -5,6 +5,9 @@ import com.hamza.commons.OrderPlacedEvent
 import com.hamza.kafka.commons.createEventItem
 import com.hamza.kafka.commons.createOrderPlacedEvent
 import com.hamza.kafka.commons.fromJson
+import io.confluent.kafka.serializers.AbstractKafkaSchemaSerDeConfig
+import io.confluent.kafka.serializers.KafkaAvroDeserializer
+import io.confluent.kafka.serializers.KafkaAvroDeserializerConfig
 import org.assertj.core.api.Assertions.assertThat
 import org.awaitility.Awaitility.await
 import org.junit.jupiter.api.AfterEach
@@ -14,12 +17,16 @@ import org.mockito.kotlin.atLeastOnce
 import org.mockito.kotlin.never
 import org.mockito.kotlin.verify
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.context.annotation.Import
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean
 import java.time.Duration
 
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)
+@SpringBootTest(
+    webEnvironment = SpringBootTest.WebEnvironment.NONE,
+    properties = ["spring.kafka.consumer.properties.schema.registry.url=mock://localhost:8080"],
+)
 @Import(PgTestContainer::class)
 class ProcessServiceTest {
     @Autowired
@@ -30,6 +37,28 @@ class ProcessServiceTest {
 
     @MockitoSpyBean
     private lateinit var processService: IProcessService<Inbox>
+
+    @Value($$"${spring.kafka.consumer.properties.schema.registry.url}")
+    private lateinit var registryUrl: String
+
+    @Value($$"${custom.topics.accepted}")
+    private lateinit var acceptedTopic: String
+
+    @Value($$"${custom.topics.rejected}")
+    private lateinit var rejectedTopic: String
+
+    // inverse of AvroSerializer.kt
+    private val deserializer by lazy {
+        KafkaAvroDeserializer().apply {
+            configure(
+                mapOf(
+                    AbstractKafkaSchemaSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG to registryUrl,
+                    KafkaAvroDeserializerConfig.SPECIFIC_AVRO_READER_CONFIG to true,
+                ),
+                false,
+            )
+        }
+    }
 
     private val events =
         listOf(
@@ -77,10 +106,18 @@ class ProcessServiceTest {
                 outboxRepo.findByOrderId(placed.orderId).also { outbox ->
                     assertThat(outbox).isNotNull
                     assertThat(outbox!!.eventType).isEqualTo(inbox.toOrderDecidedEvent().schema.name)
-                    assertThat(outbox.topic).isEqualTo(inbox.status!!.toTopic())
+                    assertThat(outbox.topic)
+                        .isEqualTo(inbox.status!!.toTopic(acceptedTopic = acceptedTopic, rejectedTopic = rejectedTopic))
                     fromJson<OrderDecidedEvent>(outbox.payload).also { payload ->
                         assertThat(payload.status).isEqualTo(inbox.status)
                         assertThat(payload.order).isEqualTo(placed)
+                    }
+
+                    // check bytea is exactly JSON payload
+                    assertThat(outbox.avroPayload).isNotEmpty()
+                    assertThat(outbox.avroPayload.first()).isEqualTo(0.toByte()) // avro leading byte 0x00
+                    (deserializer.deserialize(outbox.topic, outbox.avroPayload) as OrderDecidedEvent).also { decoded ->
+                        assertThat(decoded).isEqualTo(fromJson<OrderDecidedEvent>(outbox.payload))
                     }
                 }
             }

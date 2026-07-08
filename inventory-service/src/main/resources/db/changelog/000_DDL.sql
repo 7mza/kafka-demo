@@ -25,6 +25,7 @@ create table orders_outbox
     "eventType"   varchar(100)                not null,
     topic         varchar(100)                not null,
     payload       jsonb                       not null,
+    "avroPayload" bytea                       not null,
     primary key (id),
     constraint orders_outbox_version_check check (version >= 0)
 );

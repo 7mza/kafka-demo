@@ -37,7 +37,7 @@ class PersistenceServiceTest {
     @MockitoBean
     private lateinit var listener: ICDCListener
 
-    @Value($$"${custom.topic_name}")
+    @Value($$"${custom.topics.placed}")
     private lateinit var topicName: String
 
     private val request =
