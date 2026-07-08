@@ -2,8 +2,6 @@
 
 ![Coverage](.github/badges/jacoco.svg)
 
-event-driven pipeline demo
-
 - clustering / replication/ partitioning
 - Avro schema / registry
 - transactional outbox write
@@ -27,7 +25,7 @@ can be modified using [compose.yaml](compose.yaml) and [.env](.env)
 
 ```yaml
 kafka-demo/ # parent pom
-├── commons/ # shared libs, Avro schemas/codegen
+├── commons/ # shared libs, Avro schemas/codegen, test fixtures
 ├── order-api/
 ├── inventory-service/
 ```

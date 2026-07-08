@@ -1,10 +1,11 @@
-package com.hamza.kafka.inventory
+package com.hamza.kafka.order
 
-import com.hamza.commons.OrderPlacedEvent
+import com.hamza.commons.OrderDecidedEvent
+import com.hamza.commons.OrderStatus
 import com.hamza.kafka.commons.KafkaTestContainer
 import com.hamza.kafka.commons.PgTestContainer
-import com.hamza.kafka.commons.TSIDGenerator
 import com.hamza.kafka.commons.createEventItem
+import com.hamza.kafka.commons.createOrderDecidedEvent
 import com.hamza.kafka.commons.createOrderPlacedEvent
 import com.hamza.kafka.commons.fromJson
 import io.confluent.kafka.serializers.AbstractKafkaSchemaSerDeConfig
@@ -16,6 +17,7 @@ import org.apache.kafka.common.serialization.StringSerializer
 import org.assertj.core.api.Assertions.assertThat
 import org.awaitility.Awaitility.await
 import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Value
@@ -29,14 +31,14 @@ import java.time.Duration
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)
 @Import(PgTestContainer::class, KafkaTestContainer::class)
-class OrderPlacedConsumerTest {
+class OrderRejectedConsumerTest {
+    @Autowired
+    private lateinit var orderRepo: OrderRepository
+
     @Autowired
     private lateinit var inboxRepo: InboxRepository
 
-    @Autowired
-    private lateinit var outboxRepo: OutboxRepository
-
-    @Value($$"${custom.topics.placed}")
+    @Value($$"${custom.topics.rejected}")
     private lateinit var topicName: String
 
     @Value($$"${spring.kafka.consumer.group-id}")
@@ -59,20 +61,32 @@ class OrderPlacedConsumerTest {
                 put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer::class.java)
                 put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, KafkaAvroSerializer::class.java)
                 put(AbstractKafkaSchemaSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG, schemaRegistryUrl)
-            }.let { DefaultKafkaProducerFactory<String, OrderPlacedEvent>(it).createProducer() }
+            }.let { DefaultKafkaProducerFactory<String, OrderDecidedEvent>(it).createProducer() }
     }
 
+    private val order =
+        Order(customerId = "user_2203", items = listOf(Item(sku = "sku-01", quantity = 1, unitPriceCents = 100)))
+
     private val event =
-        createOrderPlacedEvent(
-            orderId = TSIDGenerator.next(),
-            customerId = "user_2203",
-            items = listOf(createEventItem(sku = "sku-01", quantity = 1, unitPriceCents = 100)),
+        createOrderDecidedEvent(
+            order =
+                createOrderPlacedEvent(
+                    orderId = order.id,
+                    customerId = "user_2203",
+                    items = listOf(createEventItem(sku = "sku-01", quantity = 1, unitPriceCents = 100)),
+                ),
+            status = OrderStatus.REJECTED,
         )
+
+    @BeforeEach
+    fun beforeEach() {
+        orderRepo.save(order)
+    }
 
     @AfterEach
     fun afterEach() {
+        orderRepo.deleteAll()
         inboxRepo.deleteAll()
-        outboxRepo.deleteAll()
         producer.close()
     }
 
@@ -85,8 +99,8 @@ class OrderPlacedConsumerTest {
             inboxRepo.findAll().first().also {
                 assertThat(it.id).isEqualTo(event.eventId)
                 assertThat(it.processedAt).isNotNull
-                assertThat(it.status).isNotNull
-                assertThat(fromJson<OrderPlacedEvent>(it.payload)).isEqualTo(event)
+                assertThat(it.orderId).isEqualTo(event.order.orderId)
+                assertThat(fromJson<OrderDecidedEvent>(it.payload)).isEqualTo(event)
             }
         }
 

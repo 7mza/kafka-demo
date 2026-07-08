@@ -94,6 +94,27 @@ spring:
   kafka:
     admin:
       modify-topic-configs: true
+    consumer:
+      auto-offset-reset: earliest
+      enable-auto-commit: false
+      group-id: ${spring.application.name}
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      properties:
+        schema:
+          registry:
+            url: http://localhost:9091
+        specific:
+          avro:
+            reader: true
+        spring:
+          deserializer:
+            value:
+              delegate:
+                class: io.confluent.kafka.serializers.KafkaAvroDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.ErrorHandlingDeserializer
+    listener:
+      ack-mode: manual
+      concurrency: 1
     producer:
       acks: all
       key-serializer: org.apache.kafka.common.serialization.StringSerializer

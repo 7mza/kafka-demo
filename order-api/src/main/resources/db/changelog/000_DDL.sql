@@ -31,6 +31,20 @@ create table orders_outbox
     constraint orders_outbox_version_check check (version >= 0)
 );
 
+create table orders_inbox
+(
+    "createdAt"   timestamp(6) with time zone not null,
+    "updatedAt"   timestamp(6) with time zone not null,
+    "processedAt" timestamp(6) with time zone not null,
+    version       integer default 0           not null,
+    id            varchar(13)                 not null,
+    "orderId"     varchar(13)                 not null,
+    "eventType"   varchar(100)                not null,
+    payload       jsonb                       not null,
+    primary key (id),
+    constraint orders_inbox_version_check check (version >= 0)
+);
+
 /* unpublished outbox rows index */
 create index idx_orders_outbox_unpublished on orders_outbox ("createdAt") where "publishedAt" is null;
 

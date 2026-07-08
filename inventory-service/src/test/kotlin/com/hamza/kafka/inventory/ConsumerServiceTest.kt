@@ -1,6 +1,7 @@
 package com.hamza.kafka.inventory
 
 import com.hamza.commons.OrderPlacedEvent
+import com.hamza.kafka.commons.IConsumerService
 import com.hamza.kafka.commons.ITrigger
 import com.hamza.kafka.commons.PgTestContainer
 import com.hamza.kafka.commons.TSIDGenerator
@@ -17,9 +18,9 @@ import kotlin.test.Test
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)
 @Import(PgTestContainer::class)
-class PersistenceServiceTest {
+class ConsumerServiceTest {
     @Autowired
-    private lateinit var service: IPersistenceService<OrderPlacedEvent>
+    private lateinit var service: IConsumerService<OrderPlacedEvent, Inbox>
 
     @Autowired
     private lateinit var repo: InboxRepository
@@ -58,6 +59,7 @@ class PersistenceServiceTest {
     fun `existing event should not be persisted as inbox`() {
         repo.save(inbox)
         service.consume(event).also {
+            assertThat(it.id).isEqualTo(event.eventId)
             assertThat(it.orderId).isEqualTo(event.orderId)
             assertThat(it.eventType).isEqualTo(event.schema.name)
             assertThat(fromJson<OrderPlacedEvent>(it.payload)).isEqualTo(event)

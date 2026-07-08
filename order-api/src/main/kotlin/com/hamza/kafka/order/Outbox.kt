@@ -49,19 +49,7 @@ class Outbox(
         eventType = eventType,
         topic = topic,
         payload = payload,
-    ) {
-    fun toDto() =
-        OrderOutboxDto(
-            id = this.id,
-            orderId = this.orderId,
-            eventType = this.eventType,
-            topic = this.topic,
-            payload = this.payload,
-            publishedAt = this.publishedAt,
-            attempts = this.attempts,
-            lastError = this.lastError,
-        )
-}
+    )
 
 interface OutboxRepository : JpaRepository<Outbox, String> {
     @Query(

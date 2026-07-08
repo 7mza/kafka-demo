@@ -6,15 +6,18 @@ boundary ORDER_API as API
 database DATABASE as DB
 queue KAFKA as K
 
-U -> API: POST order
-group transactional
-    API --> DB: save order
-    DB --> API: order
-    API --> API: create **order placed event**
-    API --> API: create outbox
-    API --> DB: save outbox
+group REST
+    U -> API: POST order
+    group transactional
+        API --> DB: save order
+        note right: status pending
+        DB --> API: order
+        API --> API: create order placed event
+        API --> API: create outbox
+        API --> DB: save outbox
+    end
+    API -> U: order
 end
-API -> U: order
 
 group listener on DB `outbox_channel`
     API <--> DB: listen/notify
@@ -29,7 +32,6 @@ group listener on DB `outbox_channel`
             note right: **publishedAt == null AND attempts < max_attempts**
             DB --> API: outbox batch
             API --> API: extract events
-            note across: detach from any transaction, not needed
             API --> K: publish batch
             note right: order.placed topic
             K --> API: return futures
@@ -75,5 +77,38 @@ end
 group low freq rescue periodic poll
     note across: rescue in case listener fails or back off kicks in
     API --> API: trigger drain service
+end
+
+group consumers
+    loop
+        note across: N concurrent listener: 1 per partition
+        API --> K: listen
+        note right: order.[accepted|rejected] topics
+        K --> API: consume event
+        group transactional
+            note across: idempotency check: only consumed once
+            API --> DB: dedup by eventId
+            DB --> API: response
+            alt never consumed before
+                API --> API: create inbox
+                API --> DB: save inbox
+                note right: dedup table
+                API --> DB: update order status
+                note right: topic determine status
+                API --> K: ACK
+                note right: commit read offset\nif it fails idempotency check will ignore it
+            else already consumed
+                API --> K: ACK
+                note right: commit read offset\nif it fails idempotency check will ignore it
+            end
+        end
+    end
+end
+
+group REST
+    U -> API: GET order/{id}
+    API --> DB
+    DB --> API
+    API -> U: order
 end
 @enduml
