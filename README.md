@@ -51,7 +51,7 @@ docker compose up
 ## test
 
 ```shell
-curl -X 'POST' \
+curl -i --compressed -X 'POST' \
   'http://localhost:8080/api/order' \
   -H 'accept: application/json' \
   -H 'Content-Type: application/json' \
