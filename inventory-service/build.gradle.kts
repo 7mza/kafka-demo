@@ -4,6 +4,7 @@ import org.springframework.boot.gradle.tasks.aot.ProcessTestAot
 
 plugins {
     id("com.bmuschko.docker-remote-api")
+    id("com.google.cloud.tools.jib")
     id("org.graalvm.buildtools.native")
 }
 
@@ -100,3 +101,11 @@ tasks {
 springBoot { buildInfo {} }
 
 graalvmNative { binaries { named("main") { buildArgs.addAll("--static", "--libc=musl", "-Os") } } }
+
+jib {
+    from { image = "eclipse-temurin:25-jre-alpine" }
+    to { tags = setOf("latest") }
+    container { ports = listOf("80") }
+}
+
+tasks.jibDockerBuild { dependsOn(tasks.build) }

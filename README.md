@@ -51,7 +51,7 @@ docker compose up
 ## test
 
 ```shell
-curl -i --compressed -X 'POST' \
+curl -iLX 'POST' \
   'http://localhost:8080/api/order' \
   -H 'accept: application/json' \
   -H 'Content-Type: application/json' \
@@ -89,10 +89,9 @@ nvm use && npm i && sdk env install
 ### JVM
 
 ```shell
-./gradlew clean ktlintFormat ktlintCheck build -x processAot -x processTestAot
+./gradlew clean ktlintFormat ktlintCheck build jibDockerBuild -x processAot -x processTestAot
+docker compose -f compose.jvm.yaml up
 ```
-
-Spring is configured with [compose support](compose.dev.yaml), run with IDE
 
 ### GraalVM
 

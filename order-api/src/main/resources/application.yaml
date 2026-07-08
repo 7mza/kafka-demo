@@ -15,10 +15,8 @@ logbook:
   format:
     style: http
   predicate:
-    exclude:
-      - path: /actuator/**
-      - path: /api-docs/**
-      - path: /swagger-ui/**
+    include:
+      - path: /api/**
 logging:
   include-application-name: false
   level:
