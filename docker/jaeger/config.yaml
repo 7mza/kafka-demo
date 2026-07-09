@@ -1,0 +1,48 @@
+exporters:
+  jaeger_storage_exporter:
+    trace_storage: traces_storage
+extensions:
+  healthcheckv2:
+    http:
+    use_v2: true
+  jaeger_query:
+    base_path:
+    storage:
+      traces: traces_storage
+      traces_archive: archives_storage
+    ui:
+      config_file: /etc/jaeger/jaeger-ui.json
+  jaeger_storage:
+    backends:
+      archives_storage:
+        memory:
+          max_traces: 100000
+      traces_storage:
+        memory:
+          max_traces: 100000
+processors:
+  batch:
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+service:
+  extensions:
+    - jaeger_storage
+    - jaeger_query
+    - healthcheckv2
+  pipelines:
+    traces:
+      exporters:
+        - jaeger_storage_exporter
+      processors:
+        - batch
+      receivers:
+        - otlp
+  telemetry:
+    logs:
+      level: warn
+    resource:
+      attributes:
+        - name: jaeger

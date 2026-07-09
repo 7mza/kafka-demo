@@ -46,7 +46,9 @@ docker compose up
 
 [order-api](http://localhost:8080/swagger-ui)
 
-[Kafbat UI](http://localhost:9090)
+[kafbat UI](http://localhost:9080)
+
+[jaeger](http://localhost:16686) | [grafana](http://localhost:3000) | [prometheus](http://localhost:9090)
 
 ## test
 

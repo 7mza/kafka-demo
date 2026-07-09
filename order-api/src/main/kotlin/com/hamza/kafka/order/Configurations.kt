@@ -16,7 +16,6 @@ import org.springframework.boot.ansi.AnsiOutput
 import org.springframework.boot.ansi.AnsiStyle
 import org.springframework.boot.context.event.ApplicationReadyEvent
 import org.springframework.boot.info.BuildProperties
-import org.springframework.boot.jackson.autoconfigure.JsonMapperBuilderCustomizer
 import org.springframework.boot.restclient.RestClientCustomizer
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
@@ -33,9 +32,6 @@ class Configurations(
     @Value($$"${server.port}") private val port: Int,
 ) {
     private val logger = LoggerFactory.getLogger(javaClass)
-
-    @Bean
-    fun jacksonCustomizer() = JsonMapperBuilderCustomizer { it.findAndAddModules() }
 
     @EventListener(ApplicationReadyEvent::class)
     fun readyListener() {

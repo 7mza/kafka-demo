@@ -27,7 +27,7 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,info,metrics
+        include: health,info
   endpoint:
     health:
       show-details: always
@@ -56,6 +56,8 @@ spring:
     driverClassName: org.postgresql.Driver
     hikari:
       connection-init-sql: set search_path to "${spring.application.name}"
+      # connection-timeout: 5000
+      leak-detection-threshold: 10000
     password: ${POSTGRES_PASSWORD}
     url: jdbc:postgresql://${custom.pg.host:localhost}:5432/${POSTGRES_DB}
     username: ${POSTGRES_USER}
@@ -164,6 +166,9 @@ spring:
   sql:
     init:
       mode: never
+  task:
+    execution:
+      propagate-context: true
   threads:
     virtual:
       enabled: true
@@ -203,6 +208,30 @@ custom:
 logging:
   level:
     org.apache.kafka: ${KAFKA_LOGGING_LEVEL:warn}
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  metrics:
+    enable:
+      hikaricp: true
+  opentelemetry:
+    tracing:
+      export:
+        otlp:
+          compression: gzip
+          endpoint: http://tracer:4317
+          transport: grpc
+  otlp:
+    metrics:
+      export:
+        enabled: false
+  tracing:
+    propagation:
+      type: w3c
+    sampling:
+      probability: 1
 server:
   port: 80
 spring:
@@ -216,3 +245,12 @@ spring:
     bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS}
     listener:
       concurrency: ${ORDERS_PARTITIONS}
+      observation-enabled: true
+    template:
+      observation-enabled: true
+tracing:
+  excludeUris:
+    - /actuator
+    - /api-docs
+    - /favicon
+    - /swagger-ui

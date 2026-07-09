@@ -21,7 +21,7 @@ end
 
 group listener on DB `outbox_channel`
     API <--> DB: listen/notify
-    note left: manual CDC
+    note left: manual CDC\n1 thread separate from hikari pool
     note right: trigger on **outbox.insert** that notify **outbox_channel**
     API --> API: trigger drain service
     loop until no unpublished outbox is retrieved

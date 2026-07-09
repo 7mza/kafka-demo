@@ -18,10 +18,6 @@ services:
         condition: service_healthy
       schema-registry:
         condition: service_healthy
-    deploy: &deploy
-      resources:
-        limits:
-          memory: 1g
     environment:
       KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:19092
       KAFKA_CLUSTERS_0_DEFAULTVALUESERDE: SchemaRegistry
@@ -49,7 +45,6 @@ services:
     depends_on:
       kafka:
         condition: service_healthy
-    deploy: *deploy
     environment:
       SCHEMA_REGISTRY_HOST_NAME: schema-registry
       SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: PLAINTEXT://kafka:19092

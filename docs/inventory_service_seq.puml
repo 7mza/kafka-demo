@@ -32,7 +32,7 @@ end
 
 group listener on DB `inbox_channel`
     SERVICE <--> DB: listen/notify
-    note left: manual CDC
+    note left: manual CDC\n1 thread separate from hikari pool
     note right: trigger on **inbox.insert** that notify **inbox_channel**
     SERVICE --> SERVICE: trigger process service
     loop until no unprocessed inbox is retrieved

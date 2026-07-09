@@ -1,6 +1,8 @@
 package com.hamza.kafka.commons
 
+import com.zaxxer.hikari.HikariDataSource
 import org.postgresql.PGConnection
+import org.postgresql.ds.PGSimpleDataSource
 import org.slf4j.LoggerFactory
 import org.springframework.aop.support.AopUtils
 import org.springframework.boot.context.event.ApplicationReadyEvent
@@ -17,11 +19,20 @@ interface ICDCListener : ApplicationListener<ApplicationReadyEvent> {
 class CDCListener(
     private val name: String,
     private val channel: String,
-    private val dataSource: DataSource,
+    dataSource: DataSource,
     private val trigger: ITrigger,
 ) : ICDCListener {
     private val logger = LoggerFactory.getLogger(javaClass)
     private val triggerName = AopUtils.getTargetClass(trigger).simpleName
+    private val listenDataSource =
+        dataSource.unwrap(HikariDataSource::class.java).let { pool ->
+            PGSimpleDataSource().apply {
+                setUrl(pool.jdbcUrl)
+                user = pool.username
+                password = pool.password
+                tcpKeepAlive = true
+            }
+        }
 
     override fun onApplicationEvent(event: ApplicationReadyEvent) {
         Thread.ofVirtual().name("$name-listener").start(::listen)
@@ -30,7 +41,7 @@ class CDCListener(
     override fun listen() {
         while (!Thread.currentThread().isInterrupted) {
             try {
-                dataSource.connection.use {
+                listenDataSource.connection.use {
                     val pgConn = it.unwrap(PGConnection::class.java)
                     it.createStatement().use { stm -> stm.execute("LISTEN $channel") }
                     logger.info("listening to DB events on channel {}", channel)

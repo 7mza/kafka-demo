@@ -2,10 +2,6 @@ services:
   kafka1:
     image: apache/kafka:latest
     container_name: kafka1
-    deploy: &deploy
-      resources:
-        limits:
-          memory: 1g
     environment: &kafkaEnv
       KAFKA_ADVERTISED_LISTENERS: PLAINTEXT_HOST://localhost:9092,PLAINTEXT://kafka1:19092
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: false
@@ -36,7 +32,6 @@ services:
   kafka2:
     image: apache/kafka:latest
     container_name: kafka2
-    deploy: *deploy
     environment:
       <<: *kafkaEnv
       KAFKA_ADVERTISED_LISTENERS: PLAINTEXT_HOST://localhost:9093,PLAINTEXT://kafka2:19092
@@ -49,7 +44,6 @@ services:
   kafka3:
     image: apache/kafka:latest
     container_name: kafka3
-    deploy: *deploy
     environment:
       <<: *kafkaEnv
       KAFKA_ADVERTISED_LISTENERS: PLAINTEXT_HOST://localhost:9094,PLAINTEXT://kafka3:19092
@@ -73,10 +67,10 @@ services:
         condition: service_healthy
       connect:
         condition: service_healthy
-    deploy: *deploy
     environment:
       JAVA_OPTS: --add-modules jdk.incubator.vector
       JAVA_TOOL_OPTIONS: -XX:+UseG1GC -XX:+UseStringDeduplication
+      SPRING_MAIN_BANNER-MODE: off
       KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka1:19092,kafka2:19092,kafka3:19092
       KAFKA_CLUSTERS_0_DEFAULTVALUESERDE: SchemaRegistry
       KAFKA_CLUSTERS_0_KAFKACONNECT_0_ADDRESS: http://connect:8083
@@ -85,7 +79,6 @@ services:
       KAFKA_CLUSTERS_0_SCHEMAREGISTRY: http://schema-registry:9091
       LOGGING_LEVEL_IO_KAFBAT_UI: ERROR
       LOGGING_LEVEL_ROOT: ERROR
-      SPRING_MAIN_BANNER-MODE: off
     healthcheck:
       <<: *healthcheck
       test:
@@ -94,27 +87,7 @@ services:
           'wget -qO- localhost:8080/actuator/health | grep -q "{\"status\":\"UP\"}" || exit 1',
         ]
     ports:
-      - '9090:8080'
-    restart: unless-stopped
-
-  postgres:
-    image: postgres:alpine
-    container_name: postgres
-    command: ['postgres', '-c', 'wal_level=logical']
-    deploy: *deploy
-    environment:
-      POSTGRES_DB: ${POSTGRES_DB}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_USER: ${POSTGRES_USER}
-    healthcheck:
-      <<: *healthcheck
-      test:
-        [
-          'CMD-SHELL',
-          'pg_isready -d ${POSTGRES_DB} -U ${POSTGRES_USER} | grep -q "accepting connections" || exit 1',
-        ]
-    ports:
-      - '5432:5432'
+      - '9080:8080'
     restart: unless-stopped
 
   schema-registry:
@@ -127,7 +100,6 @@ services:
         condition: service_healthy
       kafka3:
         condition: service_healthy
-    deploy: *deploy
     environment:
       SCHEMA_REGISTRY_HOST_NAME: schema-registry
       SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: PLAINTEXT://kafka1:19092,kafka2:19092,kafka3:19092
@@ -152,7 +124,6 @@ services:
         condition: service_healthy
       postgres:
         condition: service_healthy
-    deploy: *deploy
     environment:
       JAVA_TOOL_OPTIONS: -XX:+UseG1GC -XX:+UseStringDeduplication
       BOOTSTRAP_SERVERS: ${KAFKA_BOOTSTRAP_SERVERS}
@@ -174,11 +145,11 @@ services:
   connect-init:
     build:
       dockerfile: ${PWD}/docker/alpine/Dockerfile
+    container_name: connect-init
     command: >
       -c "envsubst '$$POSTGRES_DB $$POSTGRES_USER $$POSTGRES_PASSWORD $$ORDERS_PARTITIONS $$ORDERS_REPLICATION_FACTOR'
       < /tmp/connector.template.json > /tmp/connector.json &&
       curl -sS -f -X PUT -H 'Content-Type: application/json' --data @/tmp/connector.json http://connect:8083/connectors/inventory-outbox-connector/config"
-    container_name: connect-init
     depends_on:
       connect:
         condition: service_healthy
@@ -195,6 +166,29 @@ services:
     volumes:
       - ${PWD}/docker/debezium/connector.template.json:/tmp/connector.template.json:ro
 
+  postgres:
+    image: postgres:alpine
+    container_name: postgres
+    command: ['postgres', '-c', 'wal_level=logical']
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_USER: ${POSTGRES_USER}
+    healthcheck:
+      <<: *healthcheck
+      test:
+        [
+          'CMD-SHELL',
+          'pg_isready -d ${POSTGRES_DB} -U ${POSTGRES_USER} | grep -q "accepting connections" || exit 1',
+        ]
+      interval: 30s
+      retries: 3
+      start_period: 30s
+      timeout: 10s
+    ports:
+      - '5432:5432'
+    restart: unless-stopped
+
   order-api:
     image: 7mza/order-api:latest
     container_name: order-api
@@ -209,7 +203,6 @@ services:
         condition: service_healthy
       schema-registry:
         condition: service_healthy
-    deploy: *deploy
     environment:
       INVENTORY_ACCEPTED_ORDERS_TOPIC_NAME: ${INVENTORY_ACCEPTED_ORDERS_TOPIC_NAME}
       INVENTORY_REJECTED_ORDERS_TOPIC_NAME: ${INVENTORY_REJECTED_ORDERS_TOPIC_NAME}
@@ -245,7 +238,6 @@ services:
         condition: service_healthy
       schema-registry:
         condition: service_healthy
-    deploy: *deploy
     environment:
       INVENTORY_ACCEPTED_ORDERS_TOPIC_NAME: ${INVENTORY_ACCEPTED_ORDERS_TOPIC_NAME}
       INVENTORY_BATCH_SIZE: ${INVENTORY_BATCH_SIZE}
@@ -279,3 +271,69 @@ services:
           'curl -fs http://inventory-service:80/actuator/health/liveness | grep -q "UP" || exit 1',
         ]
     restart: unless-stopped
+
+  tracer:
+    build:
+      dockerfile: ${PWD}/docker/jaeger/Dockerfile
+    container_name: tracer
+    command: ['--config', '/etc/jaeger/config.yaml']
+    environment:
+      - COLLECTOR_OTLP_ENABLED=true
+      - OTEL_TRACES_SAMPLER=always_off
+    healthcheck:
+      <<: *healthcheck
+      test:
+        [
+          'CMD-SHELL',
+          'wget -qO- 0.0.0.0:13133/status | jq .healthy | grep -q "true" || exit 1',
+        ]
+    ports:
+      - '16686:16686'
+      - '4317:4317'
+    restart: unless-stopped
+    volumes:
+      - ${PWD}/docker/jaeger/config.yaml:/etc/jaeger/config.yaml:ro
+      - ${PWD}/docker/jaeger/jaeger-ui.json:/etc/jaeger/jaeger-ui.json:ro
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    command: -c "/bin/prometheus --config.file=/etc/prometheus/prometheus.yaml --log.level=warn"
+    entrypoint: sh
+    healthcheck:
+      <<: *healthcheck
+      test:
+        [
+          'CMD-SHELL',
+          'wget -qO- http://localhost:9090/-/healthy | grep -q "Prometheus Server is Healthy." || exit 1',
+        ]
+    ports:
+      - '9090:9090'
+    restart: unless-stopped
+    volumes:
+      - ${PWD}/docker/prometheus/prometheus.yaml:/etc/prometheus/prometheus.yaml:ro
+
+  grafana:
+    build:
+      context: ${PWD}/docker/grafana
+      dockerfile: Dockerfile
+    container_name: grafana
+    depends_on:
+      prometheus:
+        condition: service_healthy
+    environment:
+      - GF_LOG_LEVEL=warn
+    healthcheck:
+      <<: *healthcheck
+      test:
+        [
+          'CMD-SHELL',
+          'wget -qO- localhost:3000/api/health | jq .database | grep -q "ok" || exit 1',
+        ]
+    ports:
+      - '3000:3000'
+    restart: unless-stopped
+    volumes:
+      - ${PWD}/docker/grafana/dashboards.yaml:/etc/grafana/provisioning/dashboards/dashboards.yaml:ro
+      - ${PWD}/docker/grafana/datasources.yaml:/etc/grafana/provisioning/datasources/datasources.yaml:ro
+      - ${PWD}/docker/grafana/grafana.ini:/etc/grafana/grafana.ini:ro

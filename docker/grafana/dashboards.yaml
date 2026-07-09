@@ -1,0 +1,15 @@
+# https://grafana.com/docs/grafana/latest/administration/provisioning/#dashboards
+# set dir as default dashboards provider
+apiVersion: 1
+providers:
+  - allowUiUpdates: true
+    disableDeletion: false
+    folder:
+    folderUid:
+    name: Kafka-demo
+    options:
+      foldersFromFilesStructure: true
+      path: /var/lib/grafana/dashboards
+    orgId: 1
+    type: file
+    updateIntervalSeconds: 20

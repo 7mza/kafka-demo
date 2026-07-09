@@ -115,7 +115,3 @@ spring:
   threads:
     virtual:
       enabled: true
-  web:
-    error:
-      include-exception: true
-      include-message: always

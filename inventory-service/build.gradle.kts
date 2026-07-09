@@ -12,6 +12,7 @@ group = "com.hamza.kafka.inventory"
 version = "0.0.1"
 
 val avroSerializerVersion = "8.3.0"
+val datasourceMicrometerVersion = "2.2.1"
 val preLiquibaseVersion = "2.0.0"
 
 dependencies {
@@ -19,16 +20,19 @@ dependencies {
 
     implementation("io.confluent:kafka-avro-serializer:$avroSerializerVersion")
     implementation("net.lbruun.springboot:preliquibase-spring-boot-starter:$preLiquibaseVersion")
+    implementation("net.ttddyy.observation:datasource-micrometer-spring-boot:$datasourceMicrometerVersion")
     implementation("org.ehcache:ehcache::jakarta")
     implementation("org.hibernate.orm:hibernate-jcache")
     implementation("org.springframework.boot:spring-boot-starter-actuator")
     implementation("org.springframework.boot:spring-boot-starter-data-jpa")
     implementation("org.springframework.boot:spring-boot-starter-kafka")
     implementation("org.springframework.boot:spring-boot-starter-liquibase")
+    implementation("org.springframework.boot:spring-boot-starter-opentelemetry")
     implementation("org.springframework.boot:spring-boot-starter-validation")
     implementation("org.springframework.boot:spring-boot-starter-webmvc")
     implementation(project(":commons"))
 
+    runtimeOnly("io.micrometer:micrometer-registry-prometheus")
     runtimeOnly("org.postgresql:postgresql")
 
     testImplementation("org.springframework.boot:spring-boot-starter-data-jpa-test")

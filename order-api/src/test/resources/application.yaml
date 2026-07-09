@@ -148,10 +148,6 @@ spring:
   threads:
     virtual:
       enabled: true
-  web:
-    error:
-      include-exception: true
-      include-message: always
 springdoc:
   api-docs:
     path: /api-docs

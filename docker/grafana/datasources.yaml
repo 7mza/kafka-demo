@@ -1,0 +1,10 @@
+# set prom as default datasource
+apiVersion: 1
+datasources:
+  - access: proxy
+    basicAuth: false
+    isDefault: true
+    name: Prometheus
+    type: prometheus
+    uid: prometheus_uid
+    url: http://prometheus:9090

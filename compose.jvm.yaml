@@ -19,11 +19,6 @@ services:
       file: compose.yaml
       service: kafka-ui
 
-  postgres:
-    extends:
-      file: compose.yaml
-      service: postgres
-
   schema-registry:
     extends:
       file: compose.yaml
@@ -39,6 +34,11 @@ services:
       file: compose.yaml
       service: connect-init
 
+  postgres:
+    extends:
+      file: compose.yaml
+      service: postgres
+
   order-api:
     image: order-api:latest
     container_name: order-api
@@ -53,10 +53,6 @@ services:
         condition: service_healthy
       schema-registry:
         condition: service_healthy
-    deploy: &deploy
-      resources:
-        limits:
-          memory: 1g
     environment:
       JAVA_TOOL_OPTIONS: -XX:+UseG1GC -XX:+UseStringDeduplication
       SPRING_PROFILES_ACTIVE: default, container
@@ -94,7 +90,6 @@ services:
         condition: service_healthy
       schema-registry:
         condition: service_healthy
-    deploy: *deploy
     environment:
       JAVA_TOOL_OPTIONS: -XX:+UseG1GC -XX:+UseStringDeduplication
       SPRING_PROFILES_ACTIVE: default, container
@@ -118,3 +113,18 @@ services:
     extends:
       file: compose.yaml
       service: inventory-service-hc
+
+  tracer:
+    extends:
+      file: compose.yaml
+      service: tracer
+
+  prometheus:
+    extends:
+      file: compose.yaml
+      service: prometheus
+
+  grafana:
+    extends:
+      file: compose.yaml
+      service: grafana
