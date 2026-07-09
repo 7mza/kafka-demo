@@ -19,15 +19,13 @@
 
 can be modified using [compose.yaml](compose.yaml) and [.env](.env)
 
-(in a real prod env it should be multiple isolation zones with N ctrls + M brokers in each zone)
-
 ## components
 
 ```yaml
 kafka-demo/ # parent pom
 ├── commons/ # shared libs, Avro schemas/codegen, test fixtures
-├── order-api/
-├── inventory-service/
+├── order-api/ # rest, publish to order.placed, consume from order.[accepted|rejected]
+├── inventory-service/ # consume from order.placed, publish to order.[accepted|rejected]
 ```
 
 ### [order-api](https://hub.docker.com/r/7mza/order-api)
@@ -44,11 +42,7 @@ kafka-demo/ # parent pom
 docker compose up
 ```
 
-[order-api](http://localhost:8080/swagger-ui)
-
-[kafbat UI](http://localhost:9080)
-
-[jaeger](http://localhost:16686) | [grafana](http://localhost:3000) | [prometheus](http://localhost:9090)
+[order-api](http://localhost:8080/swagger-ui) | [kafbat UI](http://localhost:9080) | [jaeger](http://localhost:16686) | [grafana](http://localhost:3000)
 
 ## test
 
@@ -62,9 +56,9 @@ curl -iLX 'POST' \
 
 ## load test
 
-```shell
-# https://github.com/hatoo/oha
+[oha](https://github.com/hatoo/oha)
 
+```shell
 oha -n 5000 -c 500 --redirect 0 \
   -m POST \
   -H 'accept: application/json' \
@@ -76,13 +70,16 @@ oha -n 5000 -c 500 --redirect 0 \
 # -c concurrent connection
 ```
 
+expect n to land in `order.placed` and 50% of n to land in `order.[accepted|rejected]` each
+
+## chaos test
+
+pause or stop any Kafka container mid-load test, `order-api | inventory-service | debezium/connect` should recover
+automatically after some time
+
 ## build
 
-[sdkman](https://sdkman.io)
-
-[nvm](https://github.com/nvm-sh/nvm)
-
-[docker](https://docs.docker.com/engine/install/)
+[sdkman](https://sdkman.io) | [nvm](https://github.com/nvm-sh/nvm)
 
 ```shell
 nvm use && npm i && sdk env install

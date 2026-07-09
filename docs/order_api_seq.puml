@@ -7,7 +7,7 @@ database DATABASE as DB
 queue KAFKA as K
 
 group REST
-    U -> API: POST order
+    U -> API: POST /api/order
     group transactional
         API --> DB: save order
         note right: status pending
@@ -16,7 +16,7 @@ group REST
         API --> API: create outbox
         API --> DB: save outbox
     end
-    API -> U: order
+    API -> U: 201 location /api/order/{id}
 end
 
 group listener on DB `outbox_channel`
@@ -106,7 +106,7 @@ group consumers
 end
 
 group REST
-    U -> API: GET order/{id}
+    U -> API: GET /api/order/{id}
     API --> DB
     DB --> API
     API -> U: order
