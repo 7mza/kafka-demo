@@ -92,7 +92,7 @@ spring:
         default_schema: ${spring.application.name}
         enable_lazy_load_no_trans: false
         format_sql: false
-        generate_statistics: false
+        generate_statistics: true
         globally_quoted_identifiers: true
         javax:
           cache:

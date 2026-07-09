@@ -9,17 +9,14 @@ version = "0.0.1"
 val avroVersion = "1.12.1"
 val hypersistenceTsidVersion = "2.1.4"
 
-// any project that depends on BaseEntity/TSIDGenerator must pull data-jpa & validation as impl
 dependencies {
-    api("org.apache.avro:avro:$avroVersion")
-
     compileOnly("jakarta.servlet:jakarta.servlet-api")
-    compileOnly("org.apache.kafka:kafka-clients")
+    compileOnly("org.apache.avro:avro:$avroVersion")
     compileOnly("org.postgresql:postgresql")
     compileOnly("org.springframework.boot:spring-boot-autoconfigure")
     compileOnly("org.springframework.boot:spring-boot-jackson")
     compileOnly("org.springframework.boot:spring-boot-starter-data-jpa")
-    compileOnly("org.springframework.boot:spring-boot-starter-validation")
+    compileOnly("org.springframework.boot:spring-boot-validation")
     compileOnly("org.springframework.kafka:spring-kafka")
     compileOnly("org.springframework:spring-web")
 
@@ -31,7 +28,6 @@ dependencies {
     testFixturesApi("org.testcontainers:testcontainers-toxiproxy")
 
     testFixturesImplementation("org.springframework.boot:spring-boot-test")
-    testFixturesImplementation("org.springframework:spring-test")
 }
 
 tasks {

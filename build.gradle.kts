@@ -67,7 +67,6 @@ subprojects {
     dependencies {
         annotationProcessor("org.springframework.boot:spring-boot-configuration-processor")
 
-        implementation("org.jetbrains.kotlin:kotlin-reflect")
         implementation("tools.jackson.module:jackson-module-kotlin")
 
         mockitoAgent("org.mockito:mockito-core:$mockitoCoreVersion") { isTransitive = false }
