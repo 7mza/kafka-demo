@@ -7,9 +7,8 @@ queue KAFKA as K
 group consumer
     loop
         note across: N concurrent listener: 1 per partition
-        SERVICE -> K: listen
+        SERVICE <-> K: listen/new event
         note right: orders.placed topic
-        K --> SERVICE: new event
         group transactional
             note across: idempotency check: only consumed once
             SERVICE -> DB: dedup by eventId
@@ -30,7 +29,7 @@ end
 
 group listener on DB `inbox_channel`
     SERVICE <-> DB: listen/notify
-    note left: manual CDC\n1 thread separate from hikari pool
+    note left: listener thread\nseparate from hikari pool
     note right: trigger on **inbox.insert** that notify **inbox_channel**
     SERVICE -> SERVICE: trigger process service
     loop until no unprocessed inbox is retrieved

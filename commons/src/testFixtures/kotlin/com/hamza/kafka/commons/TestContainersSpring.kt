@@ -84,7 +84,7 @@ class KafkaTestContainer {
     open fun registryContainer(
         kafkaContainer: KafkaContainer,
         kNetwork: Network,
-    ): GenericContainer<*> = registryContainer(kNetwork, "PLAINTEXT://kafka:19092", kafkaContainer)
+    ): GenericContainer<*> = registryContainer(kNetwork, "kafka:19092", kafkaContainer)
 
     @Bean
     open fun kProperties(registryContainer: GenericContainer<*>): DynamicPropertyRegistrar =
@@ -125,7 +125,7 @@ class KafkaReplicationTestContainers {
         val broker2: KafkaContainer = broker(2)
         val broker3: KafkaContainer = broker(3)
         var registry: GenericContainer<*> =
-            registryContainer(network, "PLAINTEXT://kafka1:19092,kafka2:19092,kafka3:19092", broker1, broker2, broker3)
+            registryContainer(network, "kafka1:19092,kafka2:19092,kafka3:19092", broker1, broker2, broker3)
 
         init {
             /*

@@ -19,7 +19,7 @@ end
 
 group listener on DB `outbox_channel`
     API <-> DB: listen/notify
-    note left: manual CDC\n1 thread separate from hikari pool
+    note left: listener thread\nseparate from hikari pool
     note right: trigger on **outbox.insert** that notify **outbox_channel**
     API -> API: trigger drain service
     loop until no unpublished outbox is retrieved
@@ -80,9 +80,8 @@ end
 group consumers
     loop
         note across: N concurrent listener: 1 per partition
-        API -> K: listen
+        API <-> K: listen/new event
         note right: orders.[accepted|rejected] topics
-        K --> API: new event
         group transactional
             note across: idempotency check: only consumed once
             API -> DB: dedup by eventId
