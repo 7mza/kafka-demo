@@ -7,7 +7,7 @@ skinparam component {
 
 cloud "isolation"  {
     rectangle "node 1\n<controller + broker>" as N1 {
-        rectangle "topic" as T1N1 {
+        rectangle "topic X" as T1N1 {
             [partition1] <<leader>> as N1P1
             [partition2] <<replica>> as N1P2
             [partition3] <<replica>> as N1P3
@@ -15,7 +15,7 @@ cloud "isolation"  {
     }
 
     rectangle "node 2\n<controller + broker>" as N2 {
-        rectangle "topic" as T1N2 {
+        rectangle "topic X" as T1N2 {
             [partition1] <<replica>> as N2P1
             [partition2] <<leader>> as N2P2
             [partition3] <<replica>> as N2P3
@@ -23,7 +23,7 @@ cloud "isolation"  {
     }
 
     rectangle "node 3\n<controller + broker>" as N3 {
-        rectangle "topic" as T1N3 {
+        rectangle "topic X" as T1N3 {
             [partition1] <<replica>> as N3P1
             [partition2] <<replica>> as N3P2
             [partition3] <<leader>> as N3P3

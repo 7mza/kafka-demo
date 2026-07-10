@@ -50,8 +50,6 @@ spring:
   config:
     activate:
       on-profile: default
-    import:
-      - optional:file:.env[.properties]
   datasource:
     driverClassName: org.postgresql.Driver
     hikari:
@@ -191,8 +189,8 @@ springdoc:
 custom:
   batch_size: ${ORDERS_BATCH_SIZE}
   max_attempts: ${ORDERS_MAX_ATTEMPTS}
-  min_insync_replicas: ${ORDERS_MIN_INSYNC_REPLICAS}
-  partitions: ${ORDERS_PARTITIONS}
+  min_insync_replicas: ${KAFKA_MIN_INSYNC_REPLICAS}
+  partitions: ${KAFKA_PARTITIONS}
   pg:
     host: postgres
   poll_delay: ${ORDERS_POLL_DELAY}
@@ -200,7 +198,7 @@ custom:
   publish_timeout: ${ORDERS_PUBLISH_TIMEOUT}
   registry:
     host: schema-registry
-  replication_factor: ${ORDERS_REPLICATION_FACTOR}
+  replication_factor: ${KAFKA_REPLICATION_FACTOR}
   topics:
     accepted: ${INVENTORY_ACCEPTED_ORDERS_TOPIC_NAME}
     placed: ${ORDERS_PLACED_TOPIC_NAME}
@@ -244,7 +242,7 @@ spring:
   kafka:
     bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS}
     listener:
-      concurrency: ${ORDERS_PARTITIONS}
+      concurrency: ${KAFKA_PARTITIONS}
       observation-enabled: true
     template:
       observation-enabled: true

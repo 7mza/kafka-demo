@@ -2,16 +2,20 @@
 
 ![Coverage](.github/badges/jacoco.svg)
 
-- clustering / replication/ partitioning
+- clustering / replication / partitioning
 - Avro schema / registry
-- transactional outbox write
-- idempotent transactional inbox read
+- transactional outbox publish
+- idempotent transactional inbox consume
 - manual CDC
 - automatic CDC / outbox publish with Debezium
 - backoff / retry / rescue
 - dead lettering
 - GraalVM
-- mTLS
+- SASL / mTLS
+
+## overview
+
+![overview sequence UML](docs/overview_seq.svg)
 
 ## env
 
@@ -24,8 +28,8 @@ can be modified using [compose.yaml](compose.yaml) and [.env](.env)
 ```yaml
 kafka-demo/ # parent pom
 ├── commons/ # shared libs, Avro schemas/codegen, test fixtures
-├── order-api/ # rest, publish to order.placed, consume from order.[accepted|rejected]
-├── inventory-service/ # consume from order.placed, publish to order.[accepted|rejected]
+├── order-api/
+├── inventory-service/
 ```
 
 ### [order-api](https://hub.docker.com/r/7mza/order-api)
@@ -70,12 +74,12 @@ oha -n 5000 -c 500 --redirect 0 \
 # -c concurrent connection
 ```
 
-expect n to land in `order.placed` and 50% of n to land in `order.[accepted|rejected]` each
+expect n to land in `order.placed` and around 50% of n to land in `order.[accepted|rejected]` each
 
 ## chaos test
 
 pause or stop any Kafka container mid-load test, `order-api | inventory-service | debezium/connect` should recover
-automatically after some time
+automatically after 1st timeout
 
 ## build
 

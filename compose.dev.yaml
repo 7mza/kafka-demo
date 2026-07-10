@@ -34,7 +34,7 @@ services:
       start_period: 30s
       timeout: 10s
     ports:
-      - '9090:8080'
+      - '9080:8080'
     profiles:
       - kafka-ui
     restart: unless-stopped

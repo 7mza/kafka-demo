@@ -1,6 +1,4 @@
 @startuml
-skinparam sequenceMessageAlign center
-
 actor USER as U
 boundary ORDER_API as API
 database DATABASE as DB

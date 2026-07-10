@@ -38,8 +38,6 @@ spring:
   config:
     activate:
       on-profile: default
-    import:
-      - optional:file:.env[.properties]
   datasource:
     driverClassName: org.postgresql.Driver
     hikari:
@@ -202,7 +200,7 @@ spring:
   kafka:
     bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS}
     listener:
-      concurrency: ${ORDERS_PARTITIONS}
+      concurrency: ${KAFKA_PARTITIONS}
       observation-enabled: true
     template:
       observation-enabled: true

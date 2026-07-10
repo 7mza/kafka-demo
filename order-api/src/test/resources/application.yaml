@@ -26,10 +26,6 @@ logging:
     org.hibernate.SQL_SLOW: info
     root: warn
 server:
-  compression:
-    additional-mime-types: application/x-ndjson,text/event-stream
-    enabled: true
-  forward-headers-strategy: native
   port: 0
   ssl:
     enabled: false
@@ -39,8 +35,6 @@ spring:
   config:
     activate:
       on-profile: default
-    import:
-      - optional:file:.env[.properties]
   datasource:
     driverClassName: org.postgresql.Driver
     hikari:

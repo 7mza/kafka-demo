@@ -1,6 +1,4 @@
 @startuml
-skinparam sequenceMessageAlign center
-
 control INVENTORY_SERVICE as SERVICE
 database DATABASE as DB
 control DEBEZIUM as Z
