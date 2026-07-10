@@ -238,8 +238,8 @@ class ControllerTest {
                 object : DeadLetterProjection {
                     override val id = "0qtc1hmz3p6nk"
                     override val orderId = "0qsbs74grkjq2"
-                    override val eventType = "order.placed"
-                    override val topic = "order.placed"
+                    override val eventType = "orders.placed"
+                    override val topic = "orders.placed"
                     override val payload = "payload"
                     override val attempts = 10
                     override val lastError = "lastError"

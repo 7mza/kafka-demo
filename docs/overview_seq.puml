@@ -6,16 +6,16 @@ database DATABASE as DB
 control DEBEZIUM as Z
 queue KAFKA as K
 
-U --> API: 1
-API --> DB: 2
-API --> K: 3
-API --> U: 4
-K --> SERVICE: 5
-SERVICE --> DB: 6
-DB --> Z: 7
-Z --> K: 8
-K --> API: 9
-API --> DB: 10
-U --> API: 11
+U -> API: 1
+API -> DB: 2
+API --> U: 3
+API -> K: 4
+K -> SERVICE: 5
+SERVICE -> DB: 6
+DB -> Z: 7
+Z -> K: 8
+K -> API: 9
+API -> DB: 10
+U -> API: 11
 API --> U: 12
 @enduml

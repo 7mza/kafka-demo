@@ -7,21 +7,21 @@ queue KAFKA as K
 group consumer
     loop
         note across: N concurrent listener: 1 per partition
-        SERVICE --> K: listen
-        note right: order.placed topic
-        K --> SERVICE: consume event
+        SERVICE -> K: listen
+        note right: orders.placed topic
+        K --> SERVICE: new event
         group transactional
             note across: idempotency check: only consumed once
-            SERVICE --> DB: dedup by eventId
+            SERVICE -> DB: dedup by eventId
             DB --> SERVICE: response
             alt never consumed before
-                SERVICE --> SERVICE: create inbox
-                SERVICE --> DB: save inbox
+                SERVICE -> SERVICE: create inbox
+                SERVICE -> DB: save inbox
                 note right: dedup table
-                SERVICE --> K: ACK
+                SERVICE -> K: ACK
                 note right: commit read offset\nif it fails idempotency check will ignore it
             else already consumed
-                SERVICE --> K: ACK
+                SERVICE -> K: ACK
                 note right: commit read offset\nif it fails idempotency check will ignore it
             end
         end
@@ -29,44 +29,44 @@ group consumer
 end
 
 group listener on DB `inbox_channel`
-    SERVICE <--> DB: listen/notify
+    SERVICE <-> DB: listen/notify
     note left: manual CDC\n1 thread separate from hikari pool
     note right: trigger on **inbox.insert** that notify **inbox_channel**
-    SERVICE --> SERVICE: trigger process service
+    SERVICE -> SERVICE: trigger process service
     loop until no unprocessed inbox is retrieved
         note across: keep processing unprocessed inbox messages until none is left then sleeps
         group transactional
             note across: transaction here to lock current batch in DB in case of concurrency\nany concurrent will pick next batch\n+ make inbox/processing/outbox atomic
-            SERVICE --> DB: get unprocessed inbox batch
+            SERVICE -> DB: get unprocessed inbox batch
             note right: **processedAt == null**\nwill lock current batch in DB in case of concurrency\nany concurrent will pick next batch
             DB --> SERVICE: inbox batch
-            SERVICE --> SERVICE: process batch
+            SERVICE -> SERVICE: process batch
             note right: business logic here\nfor demo randomly accept or reject order\n(accepted/rejected status)
-            SERVICE --> DB: flag batch as processed
+            SERVICE -> DB: flag batch as processed
             note right: set processedAt
-            SERVICE --> SERVICE: create order decided events batch
-            SERVICE --> SERVICE: create outbox batch
+            SERVICE -> SERVICE: create order decided events batch
+            SERVICE -> SERVICE: create outbox batch
             note right: accepted/rejected status determine topic
-            SERVICE --> DB: save outbox batch
+            SERVICE -> DB: save outbox batch
         end
     end
 end
 
 group low freq rescue periodic poll
     note across: rescue in case listener fails
-    SERVICE --> SERVICE: trigger process service
+    SERVICE -> SERVICE: trigger process service
 end
 
 group debezium
     note across: automatic CDC and outbox publish
-    Z --> DB: watch
+    Z -> DB: watch
     loop
-        DB --> Z: outbox table inserts WAL
-        Z --> Z: extract payload + route by topic column
+        DB -> Z: outbox table inserts WAL
+        Z -> Z: extract payload + route by topic column
         note left: outbox event router\nrow already carries topic decision
-        Z --> K: publish
-        note right: order.[accepted|rejected] topics
-        Z --> DB: commit WAL offset
+        Z -> K: publish
+        note right: orders.[accepted|rejected] topics
+        Z -> DB: commit WAL offset
     end
 end
 @enduml

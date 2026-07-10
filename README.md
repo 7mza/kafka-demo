@@ -2,6 +2,8 @@
 
 ![Coverage](.github/badges/jacoco.svg)
 
+sboot/kotlin reusable building blocks for kafka event-driven pipelines
+
 - clustering / replication / partitioning
 - Avro schema / registry
 - transactional outbox publish
@@ -11,7 +13,7 @@
 - backoff / retry / rescue
 - dead lettering
 - GraalVM
-- SASL / mTLS
+- SASL / mTLS `// TODO`
 
 ## overview
 
@@ -27,7 +29,7 @@ can be modified using [compose.yaml](compose.yaml) and [.env](.env)
 
 ```yaml
 kafka-demo/ # parent pom
-├── commons/ # shared libs, Avro schemas/codegen, test fixtures
+├── commons/ # shared libs/abstractions, Avro schemas/codegen, test fixtures
 ├── order-api/
 ├── inventory-service/
 ```
@@ -43,7 +45,7 @@ kafka-demo/ # parent pom
 ## run
 
 ```shell
-docker compose up
+docker compose pull && docker compose up
 ```
 
 [order-api](http://localhost:8080/swagger-ui) | [kafbat UI](http://localhost:9080) | [jaeger](http://localhost:16686) | [grafana](http://localhost:3000)
@@ -74,7 +76,7 @@ oha -n 5000 -c 500 --redirect 0 \
 # -c concurrent connection
 ```
 
-expect n to land in `order.placed` and around 50% of n to land in `order.[accepted|rejected]` each
+expect n to land in `orders.placed` and around 50% of n to land in `orders.[accepted|rejected]` each
 
 ## chaos test
 

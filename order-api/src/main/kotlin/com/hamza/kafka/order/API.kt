@@ -131,9 +131,9 @@ interface API {
     {
       "id": "0qtc1hmz3p6nk",
       "orderId": "0qsbs74grkjq2",
-      "eventType": "order.placed",
+      "eventType": "orders.placed",
       "topic": "orders.placed",
-      "payload": "{\"items\": [{\"sku\": \"sku-01\", \"quantity\": 10, \"unitPriceCents\": 199}], \"eventId\": \"0qtc1hmz3p6nk\", \"orderId\": \"0qsbs74grkjq2\", \"eventType\": \"order.placed\", \"customerId\": \"fail_2203\", \"occurredAt\": \"2026-07-02T12:49:45.154Z\", \"totalAmountCents\": 1990}",
+      "payload": "{\"items\": [{\"sku\": \"sku-01\", \"quantity\": 10, \"unitPriceCents\": 199}], \"eventId\": \"0qtc1hmz3p6nk\", \"orderId\": \"0qsbs74grkjq2\", \"eventType\": \"orders.placed\", \"customerId\": \"fail_2203\", \"occurredAt\": \"2026-07-02T12:49:45.154Z\", \"totalAmountCents\": 1990}",
       "attempts": 10,
       "lastError": "IllegalStateException: forced failure for demo",
       "createdAt": "2026-07-02T12:49:45.196850Z",
