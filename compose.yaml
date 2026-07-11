@@ -1,7 +1,25 @@
 services:
+  gen-certs:
+    image: apache/kafka:latest
+    container_name: gen-certs
+    entrypoint: sh /tmp/gen_certs.sh
+    environment:
+      CA_KEY_PASSWORD: ${CA_KEY_PASSWORD}
+      FORCE_REGEN: ${FORCE_REGEN}
+      PKCS12_PASSWORD: ${PKCS12_PASSWORD}
+      SECRETS_DIR: ${SECRETS_DIR}
+    user: root
+    volumes:
+      - ${PWD}/docker/kafka/gen_certs_keytool.sh:/tmp/gen_certs.sh:ro
+      - ${PWD}/certs:/tmp/certs
+    working_dir: /tmp
+
   kafka1:
     image: apache/kafka:latest
     container_name: kafka1
+    depends_on: &kafkaDeps
+      gen-certs:
+        condition: service_completed_successfully
     environment: &kafkaEnv
       KAFKA_ADVERTISED_LISTENERS: EXTERNAL://localhost:9092,INTERNAL://kafka1:19092
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: false
@@ -10,16 +28,24 @@ services:
       KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
       KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
       KAFKA_LISTENERS: EXTERNAL://0.0.0.0:9092,INTERNAL://0.0.0.0:19092,CONTROLLER://0.0.0.0:9093
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT
-      KAFKA_LOG4J_ROOT_LOGLEVEL: WARN
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:ssl,INTERNAL:ssl,EXTERNAL:ssl
+      KAFKA_LOG4J_ROOT_LOGLEVEL: warn
       KAFKA_NODE_ID: 1
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 3
       KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_SSL_CLIENT_AUTH: required
+      KAFKA_SSL_KEYSTORE_LOCATION: ${SECRETS_DIR}/kafka.p12
+      KAFKA_SSL_KEYSTORE_PASSWORD: ${PKCS12_PASSWORD}
+      KAFKA_SSL_KEYSTORE_TYPE: pkcs12
+      KAFKA_SSL_KEY_PASSWORD: ${PKCS12_PASSWORD}
+      KAFKA_SSL_TRUSTSTORE_LOCATION: ${SECRETS_DIR}/truststore.p12
+      KAFKA_SSL_TRUSTSTORE_PASSWORD: ${PKCS12_PASSWORD}
+      KAFKA_SSL_TRUSTSTORE_TYPE: pkcs12
     healthcheck: &healthcheck
       test:
         [
           'CMD-SHELL',
-          '/opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:9092 || exit 1',
+          '/opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:9092 --command-config ${SECRETS_DIR}/client.properties || exit 1',
         ]
       interval: 30s
       retries: 3
@@ -28,10 +54,16 @@ services:
     ports:
       - '9092:9092'
     restart: unless-stopped
+    volumes: &kafkaVols
+      - ${PWD}/certs/client.properties:${SECRETS_DIR}/client.properties:ro
+      - ${PWD}/certs/admin.p12:${SECRETS_DIR}/admin.p12:ro
+      - ${PWD}/certs/kafka.p12:${SECRETS_DIR}/kafka.p12:ro
+      - ${PWD}/certs/truststore.p12:${SECRETS_DIR}/truststore.p12:ro
 
   kafka2:
     image: apache/kafka:latest
     container_name: kafka2
+    depends_on: *kafkaDeps
     environment:
       <<: *kafkaEnv
       KAFKA_ADVERTISED_LISTENERS: EXTERNAL://localhost:9093,INTERNAL://kafka2:19092
@@ -40,10 +72,12 @@ services:
     ports:
       - '9093:9092'
     restart: unless-stopped
+    volumes: *kafkaVols
 
   kafka3:
     image: apache/kafka:latest
     container_name: kafka3
+    depends_on: *kafkaDeps
     environment:
       <<: *kafkaEnv
       KAFKA_ADVERTISED_LISTENERS: EXTERNAL://localhost:9094,INTERNAL://kafka3:19092
@@ -52,6 +86,7 @@ services:
     ports:
       - '9094:9092'
     restart: unless-stopped
+    volumes: *kafkaVols
 
   kafka-ui:
     image: kafbat/kafka-ui:latest
@@ -76,9 +111,17 @@ services:
       KAFKA_CLUSTERS_0_KAFKACONNECT_0_ADDRESS: http://connect:8083
       KAFKA_CLUSTERS_0_KAFKACONNECT_0_NAME: connect
       KAFKA_CLUSTERS_0_NAME: local
+      KAFKA_CLUSTERS_0_PROPERTIES_SECURITY_PROTOCOL: ssl
+      KAFKA_CLUSTERS_0_PROPERTIES_SSL_KEYSTORE_LOCATION: ${SECRETS_DIR}/kafka-ui.p12
+      KAFKA_CLUSTERS_0_PROPERTIES_SSL_KEYSTORE_PASSWORD: ${PKCS12_PASSWORD}
+      KAFKA_CLUSTERS_0_PROPERTIES_SSL_KEYSTORE_TYPE: pkcs12
+      KAFKA_CLUSTERS_0_PROPERTIES_SSL_KEY_PASSWORD: ${PKCS12_PASSWORD}
+      KAFKA_CLUSTERS_0_PROPERTIES_SSL_TRUSTSTORE_LOCATION: ${SECRETS_DIR}/truststore.p12
+      KAFKA_CLUSTERS_0_PROPERTIES_SSL_TRUSTSTORE_PASSWORD: ${PKCS12_PASSWORD}
+      KAFKA_CLUSTERS_0_PROPERTIES_SSL_TRUSTSTORE_TYPE: pkcs12
       KAFKA_CLUSTERS_0_SCHEMAREGISTRY: http://schema-registry:9091
-      LOGGING_LEVEL_IO_KAFBAT_UI: ERROR
-      LOGGING_LEVEL_ROOT: ERROR
+      LOGGING_LEVEL_IO_KAFBAT_UI: error
+      LOGGING_LEVEL_ROOT: error
     healthcheck:
       <<: *healthcheck
       test:
@@ -89,6 +132,9 @@ services:
     ports:
       - '9080:8080'
     restart: unless-stopped
+    volumes:
+      - ${PWD}/certs/kafka-ui.p12:${SECRETS_DIR}/kafka-ui.p12:ro
+      - ${PWD}/certs/truststore.p12:${SECRETS_DIR}/truststore.p12:ro
 
   schema-registry:
     image: confluentinc/cp-schema-registry:latest
@@ -102,15 +148,26 @@ services:
         condition: service_healthy
     environment:
       SCHEMA_REGISTRY_HOST_NAME: schema-registry
-      SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: kafka1:19092,kafka2:19092,kafka3:19092
+      SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: ssl://kafka1:19092,ssl://kafka2:19092,ssl://kafka3:19092
+      SCHEMA_REGISTRY_KAFKASTORE_SECURITY_PROTOCOL: ssl
+      SCHEMA_REGISTRY_KAFKASTORE_SSL_KEYSTORE_LOCATION: ${SECRETS_DIR}/schema-registry.p12
+      SCHEMA_REGISTRY_KAFKASTORE_SSL_KEYSTORE_PASSWORD: ${PKCS12_PASSWORD}
+      SCHEMA_REGISTRY_KAFKASTORE_SSL_KEYSTORE_TYPE: pkcs12
+      SCHEMA_REGISTRY_KAFKASTORE_SSL_KEY_PASSWORD: ${PKCS12_PASSWORD}
+      SCHEMA_REGISTRY_KAFKASTORE_SSL_TRUSTSTORE_LOCATION: ${SECRETS_DIR}/truststore.p12
+      SCHEMA_REGISTRY_KAFKASTORE_SSL_TRUSTSTORE_PASSWORD: ${PKCS12_PASSWORD}
+      SCHEMA_REGISTRY_KAFKASTORE_SSL_TRUSTSTORE_TYPE: pkcs12
       SCHEMA_REGISTRY_LISTENERS: http://0.0.0.0:9091
-      SCHEMA_REGISTRY_LOG4J_ROOT_LOGLEVEL: WARN
+      SCHEMA_REGISTRY_LOG4J_ROOT_LOGLEVEL: warn
     healthcheck:
       <<: *healthcheck
       test: ['CMD-SHELL', 'echo > /dev/tcp/localhost/9091']
     ports:
       - '9091:9091'
     restart: unless-stopped
+    volumes:
+      - ${PWD}/certs/schema-registry.p12:${SECRETS_DIR}/schema-registry.p12:ro
+      - ${PWD}/certs/truststore.p12:${SECRETS_DIR}/truststore.p12:ro
 
   connect:
     image: quay.io/debezium/connect:latest
@@ -130,14 +187,38 @@ services:
       CONFIG_STORAGE_TOPIC: debezium.configs
       CONNECT_CONFIG_STORAGE_REPLICATION_FACTOR: 3
       CONNECT_CONSUMER_METADATA_MAX_AGE_MS: 30000
+      CONNECT_CONSUMER_SECURITY_PROTOCOL: ssl
+      CONNECT_CONSUMER_SSL_KEYSTORE_LOCATION: ${SECRETS_DIR}/connect.p12
+      CONNECT_CONSUMER_SSL_KEYSTORE_PASSWORD: ${PKCS12_PASSWORD}
+      CONNECT_CONSUMER_SSL_KEYSTORE_TYPE: pkcs12
+      CONNECT_CONSUMER_SSL_KEY_PASSWORD: ${PKCS12_PASSWORD}
+      CONNECT_CONSUMER_SSL_TRUSTSTORE_LOCATION: ${SECRETS_DIR}/truststore.p12
+      CONNECT_CONSUMER_SSL_TRUSTSTORE_PASSWORD: ${PKCS12_PASSWORD}
+      CONNECT_CONSUMER_SSL_TRUSTSTORE_TYPE: pkcs12
       CONNECT_OFFSET_STORAGE_REPLICATION_FACTOR: 3
       CONNECT_PRODUCER_DELIVERY_TIMEOUT_MS: 20000
       CONNECT_PRODUCER_MAX_BLOCK_MS: 10000
       CONNECT_PRODUCER_METADATA_MAX_AGE_MS: 30000
       CONNECT_PRODUCER_REQUEST_TIMEOUT_MS: 10000
+      CONNECT_PRODUCER_SECURITY_PROTOCOL: ssl
+      CONNECT_PRODUCER_SSL_KEYSTORE_LOCATION: ${SECRETS_DIR}/connect.p12
+      CONNECT_PRODUCER_SSL_KEYSTORE_PASSWORD: ${PKCS12_PASSWORD}
+      CONNECT_PRODUCER_SSL_KEYSTORE_TYPE: pkcs12
+      CONNECT_PRODUCER_SSL_KEY_PASSWORD: ${PKCS12_PASSWORD}
+      CONNECT_PRODUCER_SSL_TRUSTSTORE_LOCATION: ${SECRETS_DIR}/truststore.p12
+      CONNECT_PRODUCER_SSL_TRUSTSTORE_PASSWORD: ${PKCS12_PASSWORD}
+      CONNECT_PRODUCER_SSL_TRUSTSTORE_TYPE: pkcs12
+      CONNECT_SECURITY_PROTOCOL: ssl
+      CONNECT_SSL_KEYSTORE_LOCATION: ${SECRETS_DIR}/connect.p12
+      CONNECT_SSL_KEYSTORE_PASSWORD: ${PKCS12_PASSWORD}
+      CONNECT_SSL_KEYSTORE_TYPE: pkcs12
+      CONNECT_SSL_KEY_PASSWORD: ${PKCS12_PASSWORD}
+      CONNECT_SSL_TRUSTSTORE_LOCATION: ${SECRETS_DIR}/truststore.p12
+      CONNECT_SSL_TRUSTSTORE_PASSWORD: ${PKCS12_PASSWORD}
+      CONNECT_SSL_TRUSTSTORE_TYPE: pkcs12
       CONNECT_STATUS_STORAGE_REPLICATION_FACTOR: 3
       GROUP_ID: debezium
-      LOG_LEVEL: WARN
+      LOG_LEVEL: warn
       OFFSET_STORAGE_TOPIC: debezium.offsets
       SHUTDOWN_TIMEOUT: 30000
       STATUS_STORAGE_TOPIC: debezium.statuses
@@ -147,6 +228,9 @@ services:
     ports:
       - '8083:8083'
     restart: unless-stopped
+    volumes:
+      - ${PWD}/certs/connect.p12:${SECRETS_DIR}/connect.p12:ro
+      - ${PWD}/certs/truststore.p12:${SECRETS_DIR}/truststore.p12:ro
 
   connect-init:
     build:
@@ -217,18 +301,24 @@ services:
       KAFKA_MIN_INSYNC_REPLICAS: ${KAFKA_MIN_INSYNC_REPLICAS}
       KAFKA_PARTITIONS: ${KAFKA_PARTITIONS}
       KAFKA_REPLICATION_FACTOR: ${KAFKA_REPLICATION_FACTOR}
-      ORDERS_BATCH_SIZE: ${ORDERS_BATCH_SIZE}
-      ORDERS_MAX_ATTEMPTS: ${ORDERS_MAX_ATTEMPTS}
-      ORDERS_PLACED_TOPIC_NAME: ${ORDERS_PLACED_TOPIC_NAME}
-      ORDERS_POLL_DELAY: ${ORDERS_POLL_DELAY}
-      ORDERS_POLL_INITIAL_DELAY: ${ORDERS_POLL_INITIAL_DELAY}
-      ORDERS_PUBLISH_TIMEOUT: ${ORDERS_PUBLISH_TIMEOUT}
+      ORDER_BATCH_SIZE: ${ORDER_BATCH_SIZE}
+      ORDER_MAX_ATTEMPTS: ${ORDER_MAX_ATTEMPTS}
+      ORDER_PLACED_TOPIC_NAME: ${ORDER_PLACED_TOPIC_NAME}
+      ORDER_POLL_DELAY: ${ORDER_POLL_DELAY}
+      ORDER_POLL_INITIAL_DELAY: ${ORDER_POLL_INITIAL_DELAY}
+      ORDER_PUBLISH_TIMEOUT: ${ORDER_PUBLISH_TIMEOUT}
+      PKCS12_PASSWORD: ${PKCS12_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_USER: ${POSTGRES_USER}
+      SSL_KEYSTORE_LOCATION: ${SECRETS_DIR}/order-api.p12
+      SSL_TRUSTSTORE_LOCATION: ${SECRETS_DIR}/truststore.p12
     ports:
       - '8080:80'
     restart: unless-stopped
+    volumes:
+      - ${PWD}/certs/order-api.p12:${SECRETS_DIR}/order-api.p12:ro
+      - ${PWD}/certs/truststore.p12:${SECRETS_DIR}/truststore.p12:ro
 
   inventory-service:
     image: 7mza/inventory-service:latest
@@ -253,13 +343,19 @@ services:
       KAFKA_BOOTSTRAP_SERVERS: ${KAFKA_BOOTSTRAP_SERVERS}
       KAFKA_LOGGING_LEVEL: ${KAFKA_LOGGING_LEVEL}
       KAFKA_PARTITIONS: ${KAFKA_PARTITIONS}
-      ORDERS_PLACED_TOPIC_NAME: ${ORDERS_PLACED_TOPIC_NAME}
+      ORDER_PLACED_TOPIC_NAME: ${ORDER_PLACED_TOPIC_NAME}
+      PKCS12_PASSWORD: ${PKCS12_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_USER: ${POSTGRES_USER}
+      SSL_KEYSTORE_LOCATION: ${SECRETS_DIR}/inventory-service.p12
+      SSL_TRUSTSTORE_LOCATION: ${SECRETS_DIR}/truststore.p12
     ports:
       - '8081:80'
     restart: unless-stopped
+    volumes:
+      - ${PWD}/certs/inventory-service.p12:${SECRETS_DIR}/inventory-service.p12:ro
+      - ${PWD}/certs/truststore.p12:${SECRETS_DIR}/truststore.p12:ro
 
   # inventory-service healthcheck sidecar, service is a static musl bin without external tools
   inventory-service-hc:

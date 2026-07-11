@@ -1,6 +1,7 @@
-.bin/*
-.kotlin/*
+.bin/
+.kotlin/
 .lock
+certs/
 docs/kafka.md
 reachability-metadata.json
 

@@ -159,7 +159,7 @@ custom:
     host: schema-registry
   topics:
     accepted: ${INVENTORY_ACCEPTED_ORDERS_TOPIC_NAME}
-    placed: ${ORDERS_PLACED_TOPIC_NAME}
+    placed: ${ORDER_PLACED_TOPIC_NAME}
     rejected: ${INVENTORY_REJECTED_ORDERS_TOPIC_NAME}
 logging:
   level:
@@ -202,6 +202,16 @@ spring:
     listener:
       concurrency: ${KAFKA_PARTITIONS}
       observation-enabled: true
+    security:
+      protocol: ssl
+    ssl:
+      key-password: ${PKCS12_PASSWORD}
+      key-store-location: file:${SSL_KEYSTORE_LOCATION}
+      key-store-password: ${PKCS12_PASSWORD}
+      key-store-type: pkcs12
+      trust-store-location: file:${SSL_TRUSTSTORE_LOCATION}
+      trust-store-password: ${PKCS12_PASSWORD}
+      trust-store-type: pkcs12
     template:
       observation-enabled: true
 tracing:

@@ -187,21 +187,21 @@ springdoc:
     tagsSorter: alpha
 ---
 custom:
-  batch_size: ${ORDERS_BATCH_SIZE}
-  max_attempts: ${ORDERS_MAX_ATTEMPTS}
+  batch_size: ${ORDER_BATCH_SIZE}
+  max_attempts: ${ORDER_MAX_ATTEMPTS}
   min_insync_replicas: ${KAFKA_MIN_INSYNC_REPLICAS}
   partitions: ${KAFKA_PARTITIONS}
   pg:
     host: postgres
-  poll_delay: ${ORDERS_POLL_DELAY}
-  poll_initial_delay: ${ORDERS_POLL_INITIAL_DELAY}
-  publish_timeout: ${ORDERS_PUBLISH_TIMEOUT}
+  poll_delay: ${ORDER_POLL_DELAY}
+  poll_initial_delay: ${ORDER_POLL_INITIAL_DELAY}
+  publish_timeout: ${ORDER_PUBLISH_TIMEOUT}
   registry:
     host: schema-registry
   replication_factor: ${KAFKA_REPLICATION_FACTOR}
   topics:
     accepted: ${INVENTORY_ACCEPTED_ORDERS_TOPIC_NAME}
-    placed: ${ORDERS_PLACED_TOPIC_NAME}
+    placed: ${ORDER_PLACED_TOPIC_NAME}
     rejected: ${INVENTORY_REJECTED_ORDERS_TOPIC_NAME}
 logging:
   level:
@@ -244,6 +244,16 @@ spring:
     listener:
       concurrency: ${KAFKA_PARTITIONS}
       observation-enabled: true
+    security:
+      protocol: ssl
+    ssl:
+      key-password: ${PKCS12_PASSWORD}
+      key-store-location: file:${SSL_KEYSTORE_LOCATION}
+      key-store-password: ${PKCS12_PASSWORD}
+      key-store-type: pkcs12
+      trust-store-location: file:${SSL_TRUSTSTORE_LOCATION}
+      trust-store-password: ${PKCS12_PASSWORD}
+      trust-store-type: pkcs12
     template:
       observation-enabled: true
 tracing:

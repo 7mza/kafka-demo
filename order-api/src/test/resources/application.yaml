@@ -25,6 +25,13 @@ logging:
     org.apache.kafka: error
     org.hibernate.SQL_SLOW: info
     root: warn
+management:
+  opentelemetry:
+    enabled: false
+  otlp:
+    metrics:
+      export:
+        enabled: false
 server:
   port: 0
   ssl:

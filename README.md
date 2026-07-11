@@ -13,7 +13,7 @@ sboot/kotlin reusable building blocks for kafka event-driven pipelines
 - backoff / retry / rescue
 - dead lettering
 - GraalVM
-- SASL / mTLS `// TODO`
+- SASL / [mTLS](./docker/kafka/gen_certs_keytool.sh)
 
 ## overview
 
