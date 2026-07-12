@@ -2,7 +2,7 @@ services:
   gen-certs:
     image: apache/kafka:latest
     container_name: gen-certs
-    entrypoint: sh /tmp/gen_certs.sh
+    entrypoint: sh gen_certs.sh
     environment:
       CA_KEY_PASSWORD: ${CA_KEY_PASSWORD}
       FORCE_REGEN: ${FORCE_REGEN}
@@ -10,8 +10,8 @@ services:
       SECRETS_DIR: ${SECRETS_DIR}
     user: root
     volumes:
-      - ${PWD}/docker/kafka/gen_certs_keytool.sh:/tmp/gen_certs.sh:ro
       - ${PWD}/certs:/tmp/certs
+      - ${PWD}/docker/kafka/gen_certs.sh:/tmp/gen_certs.sh:ro
     working_dir: /tmp
 
   kafka1:
@@ -22,6 +22,7 @@ services:
         condition: service_completed_successfully
     environment: &kafkaEnv
       KAFKA_ADVERTISED_LISTENERS: EXTERNAL://localhost:9092,INTERNAL://kafka1:19092
+      KAFKA_AUTHORIZER_CLASS_NAME: org.apache.kafka.metadata.authorizer.StandardAuthorizer
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: false
       KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
       KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka1:9093,2@kafka2:9093,3@kafka3:9093
@@ -42,6 +43,8 @@ services:
       KAFKA_SSL_TRUSTSTORE_LOCATION: ${SECRETS_DIR}/truststore.p12
       KAFKA_SSL_TRUSTSTORE_PASSWORD: ${PKCS12_PASSWORD}
       KAFKA_SSL_TRUSTSTORE_TYPE: pkcs12
+      KAFKA_SUPER_USERS: User:CN=kafka;User:CN=admin
+      SECRETS_DIR: ${SECRETS_DIR}
     healthcheck: &healthcheck
       test:
         [
@@ -56,10 +59,27 @@ services:
       - '9092:9092'
     restart: unless-stopped
     volumes: &kafkaVols
-      - ${PWD}/certs/client.properties:${SECRETS_DIR}/client.properties:ro
       - ${PWD}/certs/admin.p12:${SECRETS_DIR}/admin.p12:ro
+      - ${PWD}/certs/client.properties:${SECRETS_DIR}/client.properties:ro
       - ${PWD}/certs/kafka.p12:${SECRETS_DIR}/kafka.p12:ro
       - ${PWD}/certs/truststore.p12:${SECRETS_DIR}/truststore.p12:ro
+
+  acls-init:
+    image: apache/kafka:latest
+    container_name: acls-init
+    depends_on:
+      kafka1:
+        condition: service_healthy
+    entrypoint: sh /tmp/conf_acls.sh
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: kafka1:19092
+      SECRETS_DIR: ${SECRETS_DIR}
+    restart: on-failure
+    volumes:
+      - ${PWD}/certs/admin.p12:${SECRETS_DIR}/admin.p12:ro
+      - ${PWD}/certs/client.properties:${SECRETS_DIR}/client.properties:ro
+      - ${PWD}/certs/truststore.p12:${SECRETS_DIR}/truststore.p12:ro
+      - ${PWD}/docker/kafka/conf_acls.sh:/tmp/conf_acls.sh:ro
 
   kafka2:
     image: apache/kafka:latest
@@ -93,6 +113,8 @@ services:
     image: kafbat/kafka-ui:latest
     container_name: kafka-ui
     depends_on:
+      acls-init:
+        condition: service_completed_successfully
       kafka1:
         condition: service_healthy
       kafka2:
@@ -141,6 +163,8 @@ services:
     image: confluentinc/cp-schema-registry:latest
     container_name: schema-registry
     depends_on:
+      acls-init:
+        condition: service_completed_successfully
       kafka1:
         condition: service_healthy
       kafka2:
@@ -174,6 +198,8 @@ services:
     image: quay.io/debezium/connect:latest
     container_name: connect
     depends_on:
+      acls-init:
+        condition: service_completed_successfully
       kafka1:
         condition: service_healthy
       kafka2:
@@ -284,6 +310,8 @@ services:
     image: 7mza/order-api:latest
     container_name: order-api
     depends_on:
+      acls-init:
+        condition: service_completed_successfully
       kafka1:
         condition: service_healthy
       kafka2:
@@ -325,6 +353,8 @@ services:
     image: 7mza/inventory-service:latest
     container_name: inventory-service
     depends_on:
+      acls-init:
+        condition: service_completed_successfully
       kafka1:
         condition: service_healthy
       kafka2:

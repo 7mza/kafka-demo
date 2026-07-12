@@ -12,6 +12,11 @@ services:
       gen-certs:
         condition: service_completed_successfully
 
+  acls-init:
+    extends:
+      file: compose.yaml
+      service: acls-init
+
   kafka2:
     extends:
       file: compose.yaml
@@ -52,7 +57,9 @@ services:
   order-api:
     image: order-api:latest
     container_name: order-api
-    depends_on:
+    depends_on: &springDeps
+      acls-init:
+        condition: service_completed_successfully
       kafka1:
         condition: service_healthy
       kafka2:
@@ -95,17 +102,7 @@ services:
   inventory-service:
     image: inventory-service:latest
     container_name: inventory-service
-    depends_on:
-      kafka1:
-        condition: service_healthy
-      kafka2:
-        condition: service_healthy
-      kafka3:
-        condition: service_healthy
-      postgres:
-        condition: service_healthy
-      schema-registry:
-        condition: service_healthy
+    depends_on: *springDeps
     environment:
       JAVA_TOOL_OPTIONS: -XX:+UseG1GC -XX:+UseStringDeduplication
       SPRING_PROFILES_ACTIVE: default, container
