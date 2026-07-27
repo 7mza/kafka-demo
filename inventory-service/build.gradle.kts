@@ -51,15 +51,9 @@ tasks {
         // https://graalvm.github.io/native-build-tools/latest/gradle-plugin.html
         if (project.hasProperty("generateMetadata")) {
             val metadataDir = "$projectDir/src/main/resources/META-INF/native-image/"
-            doFirst {
-                delete(
-                    file("$metadataDir/.lock"),
-                    file("$metadataDir/reachability-metadata.json"),
-                )
-            }
+            doFirst { delete(metadataDir) }
             jvmArgs("-agentlib:native-image-agent=config-merge-dir=$metadataDir")
             maxParallelForks = 1
-            forkEvery = 0
         }
     }
 

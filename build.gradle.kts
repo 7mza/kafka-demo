@@ -13,10 +13,10 @@ plugins {
     id("io.spring.dependency-management") version "1.1.7"
     id("com.autonomousapps.dependency-analysis") version "3.17.0"
     id("com.bmuschko.docker-remote-api") version "10.0.0" apply false
-    id("com.github.ben-manes.versions") version "0.54.0"
     id("com.github.davidmc24.gradle.plugin.avro") version "1.9.1" apply false
     id("com.github.node-gradle.node") version "7.1.0"
     id("com.google.cloud.tools.jib") version "3.5.4" apply false
+    id("io.github.ben-manes.versions") version "0.56.0"
     id("org.graalvm.buildtools.native") version "1.1.6" apply false
     id("org.hibernate.orm") version "7.4.1.Final"
     id("org.jlleitschuh.gradle.ktlint") version "14.2.0"
@@ -29,8 +29,8 @@ allprojects {
     plugins.apply("org.jetbrains.kotlin.jvm")
     plugins.apply("io.spring.dependency-management")
     plugins.apply("com.autonomousapps.dependency-analysis")
-    plugins.apply("com.github.ben-manes.versions")
     plugins.apply("com.github.node-gradle.node")
+    plugins.apply("io.github.ben-manes.versions")
     plugins.apply("org.jlleitschuh.gradle.ktlint")
     plugins.apply("org.owasp.dependencycheck")
     plugins.apply("jacoco")
@@ -65,8 +65,6 @@ subprojects {
     val mockitoAgent: Configuration = configurations.create("mockitoAgent")
 
     dependencies {
-        annotationProcessor("org.springframework.boot:spring-boot-configuration-processor")
-
         implementation("tools.jackson.module:jackson-module-kotlin")
 
         mockitoAgent("org.mockito:mockito-core:$mockitoCoreVersion") { isTransitive = false }

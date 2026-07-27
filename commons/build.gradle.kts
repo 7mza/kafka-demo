@@ -6,8 +6,8 @@ plugins {
 group = "com.hamza.kafka.commons"
 version = "0.0.1"
 
-val avroVersion = "1.12.1"
-val hypersistenceTsidVersion = "2.1.4"
+private val avroVersion = "1.12.1"
+private val hypersistenceTsidVersion = "2.1.4"
 
 dependencies {
     compileOnly("jakarta.servlet:jakarta.servlet-api")
