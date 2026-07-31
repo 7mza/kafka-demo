@@ -16,7 +16,7 @@ plugins {
     id("com.github.davidmc24.gradle.plugin.avro") version "1.9.1" apply false
     id("com.github.node-gradle.node") version "7.1.0"
     id("com.google.cloud.tools.jib") version "3.5.4" apply false
-    id("io.github.ben-manes.versions") version "0.56.0"
+    id("io.github.ben-manes.versions") version "0.57.0"
     id("org.graalvm.buildtools.native") version "1.1.6" apply false
     id("org.hibernate.orm") version "7.4.1.Final"
     id("org.jlleitschuh.gradle.ktlint") version "14.2.0"
@@ -167,5 +167,5 @@ tasks {
 
 node {
     download = true
-    version = "24.18.0"
+    version = "24.18.1"
 }
