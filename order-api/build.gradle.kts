@@ -14,7 +14,7 @@ version = "0.0.1"
 private val avroSerializerVersion = "8.3.0"
 private val datasourceMicrometerVersion = "2.2.1"
 private val logbookSpringVersion = "4.0.4"
-private val openapiVersion = "3.0.3"
+private val openapiVersion = "3.1.0"
 private val preLiquibaseVersion = "2.0.0"
 
 dependencies {
