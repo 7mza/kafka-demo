@@ -6,7 +6,7 @@ plugins {
 group = "com.hamza.kafka.commons"
 version = "0.0.1"
 
-private val avroVersion = "1.12.1"
+private val avroVersion = "1.12.2"
 private val hypersistenceTsidVersion = "2.1.4"
 
 dependencies {
