@@ -9,16 +9,16 @@ plugins {
     kotlin("jvm") version "2.4.10"
     kotlin("plugin.jpa") version "2.4.10"
     kotlin("plugin.spring") version "2.4.10" apply false
-    id("org.springframework.boot") version "4.1.0" apply false
+    id("org.springframework.boot") version "4.1.1" apply false
     id("io.spring.dependency-management") version "1.1.7"
-    id("com.autonomousapps.dependency-analysis") version "3.18.0"
+    id("com.autonomousapps.dependency-analysis") version "3.19.1"
     id("com.bmuschko.docker-remote-api") version "10.0.0" apply false
     id("com.github.davidmc24.gradle.plugin.avro") version "1.9.1" apply false
     id("com.github.node-gradle.node") version "7.1.0"
     id("com.google.cloud.tools.jib") version "3.5.4" apply false
     id("io.github.ben-manes.versions") version "0.61.0"
     id("org.graalvm.buildtools.native") version "1.1.10" apply false
-    id("org.hibernate.orm") version "7.4.1.Final"
+    id("org.hibernate.orm") version "7.4.5.Final"
     id("org.jlleitschuh.gradle.ktlint") version "14.2.0"
     id("org.owasp.dependencycheck") version "13.0.0"
     jacoco
@@ -167,5 +167,5 @@ tasks {
 
 node {
     download = true
-    version = "24.19.0"
+    version = "24.20.0"
 }

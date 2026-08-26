@@ -1,4 +1,4 @@
-FROM ghcr.io/graalvm/native-image-community:25i2-muslib AS builder
+FROM ghcr.io/graalvm/native-image-community:25i3-muslib AS builder
 ARG MODULE_NAME
 RUN microdnf install -y --nodocs --setopt=install_weak_deps=0 xz && microdnf clean all
 RUN curl -fsSL https://github.com/upx/upx/releases/download/v5.2.0/upx-5.2.0-amd64_linux.tar.xz \
