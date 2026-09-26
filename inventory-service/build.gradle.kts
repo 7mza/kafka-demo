@@ -11,8 +11,8 @@ plugins {
 group = "com.hamza.kafka.inventory"
 version = "0.0.1"
 
-private val avroSerializerVersion = "8.3.1"
-private val datasourceMicrometerVersion = "2.2.1"
+private val avroSerializerVersion = "8.3.2"
+private val datasourceMicrometerVersion = "2.3.0"
 private val preLiquibaseVersion = "2.0.0"
 
 dependencies {

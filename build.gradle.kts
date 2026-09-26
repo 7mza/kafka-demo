@@ -11,13 +11,13 @@ plugins {
     kotlin("plugin.spring") version "2.4.20" apply false
     id("org.springframework.boot") version "4.1.1" apply false
     id("io.spring.dependency-management") version "1.1.7"
-    id("com.autonomousapps.dependency-analysis") version "3.19.1"
+    id("com.autonomousapps.dependency-analysis") version "3.19.2"
     id("com.bmuschko.docker-remote-api") version "10.0.0" apply false
     id("com.github.davidmc24.gradle.plugin.avro") version "1.9.1" apply false
     id("com.github.node-gradle.node") version "7.1.0"
     id("com.google.cloud.tools.jib") version "3.5.4" apply false
-    id("io.github.ben-manes.versions") version "0.61.0"
-    id("org.graalvm.buildtools.native") version "1.1.12" apply false
+    id("io.github.ben-manes.versions") version "0.64.0"
+    id("org.graalvm.buildtools.native") version "1.1.14" apply false
     id("org.hibernate.orm") version "7.4.5.Final"
     id("org.jlleitschuh.gradle.ktlint") version "14.2.0"
     id("org.owasp.dependencycheck") version "13.0.0"
@@ -59,8 +59,8 @@ subprojects {
     plugins.apply("org.springframework.boot")
     plugins.apply("org.hibernate.orm")
 
-    val mockitoCoreVersion = "5.23.0"
-    val mockitoKotlinVersion = "6.3.0"
+    val mockitoCoreVersion = "5.24.0"
+    val mockitoKotlinVersion = "6.4.0"
 
     val mockitoAgent: Configuration = configurations.create("mockitoAgent")
 
