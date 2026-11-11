@@ -11,7 +11,7 @@ plugins {
 group = "com.hamza.kafka.order"
 version = "0.0.1"
 
-private val avroSerializerVersion = "8.4.0"
+private val avroSerializerVersion = "8.4.1"
 private val datasourceMicrometerVersion = "2.3.0"
 private val logbookSpringVersion = "4.2.0"
 private val openapiVersion = "3.2.0"
